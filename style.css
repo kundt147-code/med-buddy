@@ -1,0 +1,589 @@
+body {
+
+```
+font-family: Arial, sans-serif;
+
+text-align: center;
+
+background-color: #f5f5f5;
+
+margin: 0;
+
+padding: 30px;
+```
+
+}
+
+/* ========================= */
+/* TIÊU ĐỀ */
+/* ========================= */
+
+h1 {
+
+```
+margin-bottom: 10px;
+```
+
+}
+
+/* ========================= */
+/* NÚT QUẢN LÝ GÓC PHẢI */
+/* ========================= */
+
+.quan-ly-goc-phai {
+
+```
+position: absolute;
+
+top: 20px;
+
+right: 20px;
+```
+
+}
+
+.quan-ly-goc-phai button {
+
+```
+padding: 7px 12px;
+
+font-size: 13px;
+
+cursor: pointer;
+
+border: 1px solid #999;
+
+border-radius: 5px;
+
+background-color: white;
+```
+
+}
+
+/* ========================= */
+/* QR */
+/* ========================= */
+
+.qr-tui {
+
+```
+width: 100%;
+
+margin: 20px auto;
+
+text-align: center;
+```
+
+}
+
+.qr-tui p {
+
+```
+text-align: center;
+
+margin: 8px 0;
+```
+
+}
+
+.ma-qr {
+
+```
+width: 150px;
+
+height: 150px;
+
+margin: 15px auto;
+
+display: flex;
+
+align-items: center;
+
+justify-content: center;
+
+background-color: white;
+
+border: 2px solid #333;
+```
+
+}
+
+.ma-qr img {
+
+```
+width: 150px;
+
+height: 150px;
+
+display: block;
+```
+
+}
+
+/* ========================= */
+/* TỦ THUỐC */
+/* ========================= */
+
+.tu-thuoc {
+
+```
+width: 500px;
+
+margin: 30px auto;
+
+padding: 20px;
+
+background-color: #d9d9d9;
+
+border: 4px solid #555;
+
+border-radius: 10px;
+
+display: grid;
+
+grid-template-columns:
+    repeat(4, 1fr);
+
+gap: 10px;
+```
+
+}
+
+/* ========================= */
+/* NGĂN */
+/* ========================= */
+
+.ngan {
+
+```
+height: 100px;
+
+font-size: 24px;
+
+font-weight: bold;
+
+cursor: pointer;
+
+position: relative;
+
+background-color: white;
+
+border: 2px solid #777;
+
+border-radius: 5px;
+
+overflow: hidden;
+
+padding: 8px;
+```
+
+}
+
+.ngan:hover {
+
+```
+background-color: #eeeeee;
+```
+
+}
+
+.ngan > span {
+
+```
+display: block;
+
+font-size: 24px;
+```
+
+}
+
+.ngan small {
+
+```
+display: block;
+
+width: 85%;
+
+margin-left: auto;
+
+margin-right: auto;
+
+margin-top: 4px;
+
+font-size: 10px;
+
+font-weight: normal;
+
+line-height: 1.2;
+
+overflow: hidden;
+
+text-overflow: ellipsis;
+
+white-space: nowrap;
+```
+
+}
+
+/* ========================= */
+/* CÀI ĐẶT NGĂN */
+/* ========================= */
+
+#caiDat {
+
+```
+width: 400px;
+
+margin: 30px auto;
+
+padding: 25px;
+
+background-color: white;
+
+border: 2px solid #777;
+
+border-radius: 10px;
+
+box-shadow:
+    0 4px 10px
+    rgba(0, 0, 0, 0.1);
+```
+
+}
+
+#caiDat h2 {
+
+```
+margin-bottom: 5px;
+```
+
+}
+
+#caiDat p {
+
+```
+margin-top: 0;
+
+color: #666;
+```
+
+}
+
+#caiDat label {
+
+```
+display: block;
+
+text-align: left;
+
+margin-bottom: 6px;
+
+font-weight: bold;
+```
+
+}
+
+#caiDat input,
+#caiDat select,
+#caiDat textarea {
+
+```
+width: 100%;
+
+box-sizing: border-box;
+
+padding: 10px;
+
+font-size: 16px;
+
+border: 1px solid #aaa;
+
+border-radius: 5px;
+```
+
+}
+
+#caiDat textarea {
+
+```
+height: 100px;
+
+resize: vertical;
+```
+
+}
+
+#caiDat button {
+
+```
+padding: 10px 20px;
+
+margin: 5px;
+
+font-size: 16px;
+
+cursor: pointer;
+
+border: none;
+
+border-radius: 5px;
+```
+
+}
+
+/* ========================= */
+/* HỒ SƠ TRONG NGĂN */
+/* ========================= */
+
+#hoSoNguoi {
+
+```
+margin-top: 20px;
+
+padding: 15px;
+
+border: 1px solid #ccc;
+
+border-radius: 8px;
+
+background-color: #f8f8f8;
+
+text-align: left;
+```
+
+}
+
+#hoSoNguoi h3 {
+
+```
+margin-top: 0;
+
+text-align: center;
+```
+
+}
+
+#hoSoNguoi p {
+
+```
+margin: 8px 0;
+
+color: #333;
+```
+
+}
+
+/* ========================= */
+/* CÁC TRANG QUẢN LÝ */
+/* ========================= */
+
+#quanLyNguoi,
+#thongTinNguoiQuanLy,
+#themNguoi {
+
+```
+width: 400px;
+
+margin: 30px auto;
+
+padding: 25px;
+
+background-color: white;
+
+border: 2px solid #777;
+
+border-radius: 10px;
+
+box-shadow:
+    0 4px 10px
+    rgba(0, 0, 0, 0.1);
+```
+
+}
+
+/* ========================= */
+/* DANH SÁCH NGƯỜI */
+/* ========================= */
+
+#danhSachNguoiQuanLy button {
+
+```
+width: 100%;
+
+padding: 12px;
+
+font-size: 16px;
+
+cursor: pointer;
+
+background-color: white;
+
+border: 1px solid #aaa;
+
+border-radius: 5px;
+```
+
+}
+
+#danhSachNguoiQuanLy button:hover {
+
+```
+background-color: #eeeeee;
+```
+
+}
+
+/* ========================= */
+/* FORM THÊM NGƯỜI */
+/* ========================= */
+
+#themNguoi {
+
+```
+text-align: left;
+```
+
+}
+
+#themNguoi h2 {
+
+```
+text-align: center;
+```
+
+}
+
+#themNguoi label {
+
+```
+display: block;
+
+margin-bottom: 6px;
+
+font-weight: bold;
+```
+
+}
+
+#themNguoi input,
+#themNguoi textarea {
+
+```
+width: 100%;
+
+box-sizing: border-box;
+
+padding: 10px;
+
+font-size: 15px;
+
+border: 1px solid #aaa;
+
+border-radius: 5px;
+```
+
+}
+
+#themNguoi textarea {
+
+```
+height: 80px;
+
+resize: vertical;
+```
+
+}
+
+/* ========================= */
+/* THÔNG TIN NGƯỜI */
+/* ========================= */
+
+#thongTinNguoiQuanLy {
+
+```
+text-align: left;
+```
+
+}
+
+#thongTinNguoiQuanLy h2 {
+
+```
+text-align: center;
+```
+
+}
+
+#khuVucThongTinNguoi p {
+
+```
+margin: 12px 0;
+
+line-height: 1.5;
+```
+
+}
+
+#khuVucThongTinNguoi input,
+#khuVucThongTinNguoi textarea {
+
+```
+width: 100%;
+
+box-sizing: border-box;
+
+margin-top: 6px;
+
+padding: 9px;
+
+font-size: 15px;
+
+border: 1px solid #aaa;
+
+border-radius: 5px;
+```
+
+}
+
+#khuVucThongTinNguoi textarea {
+
+```
+min-height: 80px;
+
+resize: vertical;
+```
+
+}
+
+/* ========================= */
+/* NÚT */
+/* ========================= */
+
+#nutXemNguoi,
+#nutSuaNguoi {
+
+```
+text-align: center;
+```
+
+}
+
+#quanLyNguoi button,
+#thongTinNguoiQuanLy button,
+#themNguoi button {
+
+```
+padding: 10px 18px;
+
+margin: 5px;
+
+font-size: 15px;
+
+cursor: pointer;
+
+border: none;
+
+border-radius: 5px;
+```
+
+}
