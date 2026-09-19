@@ -37,3 +37,24 @@ create index if not exists idx_lich_su_ma_tu_so_ngan_ngay on lich_su (ma_tu, so_
 -- Lưu ý: các policy RLS "medbuddy_slots_all" và "medbuddy_history_all" tạo ở migration_v6.sql
 -- đã cho phép anon toàn quyền select/insert/update/delete trên ngan_thuoc và lich_su,
 -- nên các cột mới ở trên không cần policy riêng.
+
+
+-- 5) Khóa định danh cho lịch hằng ngày.
+--    Giúp chống race condition khi Lưu mới và động cơ 5 giây cùng tạo lịch.
+alter table if exists lich_su
+    add column if not exists lich_nhac_key text;
+
+-- Các bản ghi lịch sử cũ không phải lịch hằng ngày không dùng key này.
+-- Key chỉ được gán cho các dòng đã có dữ liệu lặp hằng ngày.
+update lich_su
+set lich_nhac_key = ma_tu || '|' || so_ngan::text || '|' || ngay::text
+where lich_nhac_key is null
+  and lap_lai = 'hang_ngay'
+  and ngay is not null;
+
+-- Nếu dữ liệu test cũ đã có hai dòng hằng ngày trùng key, giữ nguyên lịch sử
+-- và chưa tạo unique index cho tới khi dữ liệu được làm sạch thủ công.
+-- Với database sạch/v7 mới, index này sẽ được tạo để chặn trùng tuyệt đối.
+create unique index if not exists uq_lich_su_lich_nhac_key
+    on lich_su (lich_nhac_key)
+    where lich_nhac_key is not null;

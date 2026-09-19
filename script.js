@@ -470,7 +470,8 @@ async function luuMoi() {
         }
 
         const n = layNguoi(d.nguoiSuDung);
-        const historyResult = await db.from("lich_su").insert({
+        const homNay = ngayHomNay();
+        const baseHistory = {
             ma_tu: maTu,
             so_ngan: soNganHienTai,
             nguoi_su_dung_id: d.nguoiSuDung,
@@ -478,11 +479,29 @@ async function luuMoi() {
             gio_uong: d.gioUong,
             loi_nhan: d.loiNhan,
             bat_nhac: d.batNhac,
-            ngay: ngayHomNay(),
+            ngay: homNay,
             lap_lai: d.lapLai,
             trang_thai: "cho_den_gio",
             so_lan_nhac: 0
-        }).select().single();
+        };
+
+        let historyResult;
+        if (d.lapLai === "hang_ngay") {
+            // Lịch hằng ngày chỉ có đúng 1 dòng cho một ngăn trong một ngày.
+            // Nếu động cơ đã tạo dòng hôm nay trước khi người dùng bấm Lưu mới,
+            // dùng lại chính dòng đó thay vì INSERT thêm một dòng.
+            const lichKey = `${maTu}|${soNganHienTai}|${homNay}`;
+            const existing = await db.from("lich_su").select("id").eq("lich_nhac_key", lichKey).maybeSingle();
+            if (existing.error) throw existing.error;
+            if (existing.data?.id) {
+                historyResult = await db.from("lich_su").update({ ...baseHistory, lich_nhac_key: lichKey, updated_at: new Date().toISOString() }).eq("id", existing.data.id).select().single();
+            } else {
+                historyResult = await db.from("lich_su").insert({ ...baseHistory, lich_nhac_key: lichKey }).select().single();
+            }
+        } else {
+            // Không lặp: mỗi lần người dùng bấm Lưu mới là một lần tạo lịch sử mới.
+            historyResult = await db.from("lich_su").insert(baseHistory).select().single();
+        }
         if (historyResult.error) throw historyResult.error;
 
         await taiDuLieuTuDB();
@@ -564,19 +583,14 @@ async function luuChinhSuaNgan() {
             }).eq("id", banGhi.id);
             if (hr.error) throw hr.error;
         } else if (!banGhi) {
-            const hr = await db.from("lich_su").insert({
-                ma_tu: maTu,
-                so_ngan: soNganHienTai,
-                nguoi_su_dung_id: d.nguoiSuDung,
-                ten_nguoi: n?.ten || "Chưa có thông tin",
-                gio_uong: d.gioUong,
-                loi_nhan: d.loiNhan,
-                bat_nhac: d.batNhac,
-                ngay: homNay,
-                lap_lai: d.lapLai,
-                trang_thai: "cho_den_gio",
-                so_lan_nhac: 0
-            });
+            const payload = {
+                ma_tu: maTu, so_ngan: soNganHienTai, nguoi_su_dung_id: d.nguoiSuDung,
+                ten_nguoi: n?.ten || "Chưa có thông tin", gio_uong: d.gioUong,
+                loi_nhan: d.loiNhan, bat_nhac: d.batNhac, ngay: homNay,
+                lap_lai: d.lapLai, trang_thai: "cho_den_gio", so_lan_nhac: 0
+            };
+            if (d.lapLai === "hang_ngay") payload.lich_nhac_key = `${maTu}|${soNganHienTai}|${homNay}`;
+            const hr = await db.from("lich_su").insert(payload);
             if (hr.error) throw hr.error;
         }
         // Nếu bản ghi hôm nay đã "Đang nhắc"/"Đã dùng thuốc"/"Chưa dùng thuốc" thì giữ nguyên, không sửa.
@@ -1055,14 +1069,23 @@ async function kiemTraLichNhac() {
             const daCo = lichSu.some(x => Number(x.so_ngan) === n && x.ngay === homNay);
             if (daCo) continue;
             const nguoi = layNguoi(d.nguoiSuDung);
+            const lichKey = `${maTu}|${n}|${homNay}`;
             try {
+                // Có thể xảy ra race giữa Lưu mới và vòng kiểm tra 5 giây.
+                // Unique key trong DB là lớp bảo vệ cuối cùng chống tạo 2 dòng.
                 const r = await db.from("lich_su").insert({
                     ma_tu: maTu, so_ngan: n, nguoi_su_dung_id: d.nguoiSuDung,
                     ten_nguoi: nguoi?.ten || "Chưa có thông tin", gio_uong: d.gioUong,
                     loi_nhan: d.loiNhan, bat_nhac: d.batNhac, ngay: homNay,
-                    lap_lai: d.lapLai, trang_thai: "cho_den_gio", so_lan_nhac: 0
+                    lap_lai: d.lapLai, trang_thai: "cho_den_gio", so_lan_nhac: 0,
+                    lich_nhac_key: lichKey
                 }).select().single();
                 if (!r.error && r.data) { lichSu.unshift(r.data); capNhatHienThiSauLichNhac(); }
+                else if (r.error) {
+                    // 23505 = bản ghi hôm nay đã được thiết bị/luồng khác tạo.
+                    // Không báo lỗi cho người dùng; vòng kiểm tra kế tiếp sẽ đọc lại dòng đó.
+                    if (r.error.code !== "23505") console.warn("MEDBUDDY: không thể tạo lịch sử hằng ngày cho ngăn", n, r.error);
+                }
             } catch (e) { console.warn("MEDBUDDY: không thể tạo lịch sử hằng ngày cho ngăn", n, e); }
         }
 
