@@ -942,12 +942,11 @@ window.addEventListener("DOMContentLoaded", () => {
             await khoiPhucTrangThai();
         } catch (err) {
             console.error("Không thể khởi tạo MEDBUDDY:", err);
-            veTrangChinh();
+            // Không ép về trang chủ khi F5. Nếu khôi phục thất bại, giữ trang bootstrap đã chọn.
+            if (!localStorage.getItem(TRANG_THAI_KEY)) veTrangChinh();
         } finally {
-            // Chỉ cho phần nội dung hiện ra sau khi đã khôi phục đúng trang.
-            // Nhờ vậy F5 không còn chớp Trang chủ 1-2 giây trước khi về trang đang dùng.
-            document.body.classList.remove("app-loading");
-            document.body.classList.add("app-ready");
+            // Không ẩn toàn bộ main trong lúc khôi phục. CSS bootstrap đã chọn đúng trang từ đầu.
+            document.documentElement.removeAttribute("data-med-view");
         }
     })();
 });

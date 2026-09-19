@@ -6,42 +6,38 @@
 <title>MEDBUDDY</title>
 <link rel="stylesheet" href="style.css">
 <style>
-/* Khôi phục giao diện ngay khi HTML sẵn sàng, không chớp về Trang chủ khi F5. */
-body.app-loading main{visibility:hidden}
-body.app-ready main{visibility:visible}
-body.pre-restored main{visibility:visible}
-body.pre-restored .page{display:none}
-body.pre-restored #trangChinh{display:block}
-body.pre-restored #caiDat,
-body.pre-restored #quanLyNguoi,
-body.pre-restored #thongTinNguoiQuanLy,
-body.pre-restored #themNguoi,
-body.pre-restored #lichSu,
-body.pre-restored #xemLichSu{display:none}
+/* Bootstrap trạng thái: không ẩn toàn bộ main khi F5. Chỉ ẩn đúng trang mặc định nếu đã có trạng thái cần khôi phục. */
+html[data-med-view="caiDat"] #trangChinh,
+html[data-med-view="quanLyNguoi"] #trangChinh,
+html[data-med-view="thongTinNguoiQuanLy"] #trangChinh,
+html[data-med-view="themNguoi"] #trangChinh,
+html[data-med-view="lichSu"] #trangChinh,
+html[data-med-view="xemLichSu"] #trangChinh { display:none !important; }
+html[data-med-view="caiDat"] #caiDat { display:block !important; }
+html[data-med-view="quanLyNguoi"] #quanLyNguoi { display:block !important; }
+html[data-med-view="thongTinNguoiQuanLy"] #thongTinNguoiQuanLy { display:block !important; }
+html[data-med-view="themNguoi"] #themNguoi { display:block !important; }
+html[data-med-view="lichSu"] #lichSu { display:block !important; }
+html[data-med-view="xemLichSu"] #xemLichSu { display:block !important; }
 </style>
 <script>
-/* Bootstrap độc lập với Supabase: F5 sẽ hiện đúng trang đã lưu ngay khi DOM tải xong. */
+/* Đọc trạng thái trước khi body được render để F5 không chớp/không trắng. */
 (function(){
   try {
     var params = new URLSearchParams(window.location.search);
     var maTu = params.get('tu') || 'MEDBUDDY-1';
     var raw = localStorage.getItem('medbuddy_trang_thai_' + maTu);
-    var state = raw ? JSON.parse(raw) : null;
-    if (state && state.view) {
-      document.addEventListener('DOMContentLoaded', function(){
-        var ids = ['trangChinh','caiDat','quanLyNguoi','thongTinNguoiQuanLy','themNguoi','lichSu','xemLichSu'];
-        ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
-        var target = document.getElementById(state.view);
-        if(target) target.style.display = 'block';
-        document.body.classList.add('pre-restored');
-        document.body.classList.remove('app-loading');
-      }, {once:true});
+    if (!raw) return;
+    var state = JSON.parse(raw);
+    var allowed = ['caiDat','quanLyNguoi','thongTinNguoiQuanLy','themNguoi','lichSu','xemLichSu'];
+    if (state && allowed.indexOf(state.view) !== -1) {
+      document.documentElement.setAttribute('data-med-view', state.view);
     }
   } catch(e) {}
 })();
 </script>
 </head>
-<body class="app-loading">
+<body>
 <header class="top-header">
   <button class="menu-btn" type="button" onclick="moMenu()" aria-label="Mở menu"><span></span><span></span><span></span></button>
   <button class="brand brand-button" type="button" onclick="veTrangChinh()" aria-label="Về trang chủ"><img src="medbuddy-logo.svg" class="brand-logo" alt="MEDBUDDY"><div><h1>MEDBUDDY</h1><p>Vì sức khỏe người thân</p></div></button>
