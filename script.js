@@ -617,10 +617,19 @@ async function xoaThongTinNgan() {
         try {
             const { error } = await db.from("ngan_thuoc").delete().eq("id", d.id).eq("ma_tu", maTu);
             if (error) throw error;
+            // Xóa cấu hình hiện tại của ngăn, nhưng KHÔNG xóa lịch sử hoặc người sử dụng.
+            // Đồng thời dừng nhắc đang phát của ngăn này và ẩn thẻ "Lịch nhắc hôm nay"
+            // vì ngăn hiện không còn cấu hình hoạt động. Bản ghi lịch sử vẫn giữ nguyên.
+            const historyIdsOfSlot = lichSu
+                .filter(x => Number(x.so_ngan) === Number(soNganHienTai) && x.ma_tu === maTu)
+                .map(x => x.id);
+            historyIdsOfSlot.forEach(id => dungPhatLoiNhac(id));
+
             await taiDuLieuTuDB();
             dangNhap = false;
             dangChinhSuaNgan = false;
-            await moNgan(soNganHienTai);
+            hienThiDuLieuNgan();
+            hienThiTrangThaiNhacTrongNgan();
             hienThiModal("Đã xóa", "Đã xóa thông tin hiện tại của ngăn thành công. Lịch sử và người sử dụng vẫn được giữ nguyên.", "success");
         } catch (err) {
             console.error("Xóa thông tin ngăn:", err);
@@ -985,31 +994,37 @@ function phatLoiNhac(recordId, text, ketThuc) {
     if (hien && hien.dangChay) return;
     if (!window.speechSynthesis) return;
 
-    const state = { dangChay: true, ketThuc, timer: null };
+    const state = { dangChay: true, ketThuc, timer: null, lapTimer: null };
     dangPhatLoaTheo[recordId] = state;
 
-    // Bảo đảm chu kỳ phát kết thúc đúng sau 1 phút, kể cả khi trình duyệt
-    // không gọi onend của SpeechSynthesis đúng thời điểm.
-    state.timer = setTimeout(() => dungPhatLoiNhac(recordId), Math.max(0, ketThuc - Date.now()));
-
-    const noiTiep = () => {
-        const trangThaiHien = dangPhatLoaTheo[recordId];
-        if (!trangThaiHien || !trangThaiHien.dangChay) return;
-        if (Date.now() >= trangThaiHien.ketThuc) {
+    // Mỗi lần đọc là một SpeechSynthesisUtterance riêng. Chrome đôi khi
+    // không gọi onend ổn định, vì vậy không phụ thuộc vào onend để lặp.
+    // Cứ vài giây kiểm tra một lần và phát lại cho tới đúng mốc 1 phút.
+    const noiMotLan = () => {
+        const hienTai = dangPhatLoaTheo[recordId];
+        if (!hienTai || !hienTai.dangChay) return;
+        if (Date.now() >= hienTai.ketThuc) {
             dungPhatLoiNhac(recordId);
             return;
         }
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
         try {
             const u = new SpeechSynthesisUtterance(text || "Đã đến giờ uống thuốc");
             u.lang = "vi-VN";
-            u.onend = noiTiep;
-            u.onerror = noiTiep;
+            u.rate = 0.95;
+            u.pitch = 1;
             window.speechSynthesis.speak(u);
         } catch (e) {
-            dungPhatLoiNhac(recordId);
+            // Không dừng toàn bộ chu kỳ chỉ vì một lượt đọc lỗi.
+            console.warn("MEDBUDDY: không thể phát một lượt nhắc:", e);
         }
     };
-    noiTiep();
+
+    noiMotLan();
+    // Khoảng 5 giây/lượt: sau khi một câu đọc xong sẽ tự đọc lại,
+    // nhưng vẫn dừng tuyệt đối khi hết 1 phút.
+    state.lapTimer = setInterval(noiMotLan, 5000);
+    state.timer = setTimeout(() => dungPhatLoiNhac(recordId), Math.max(0, ketThuc - Date.now()));
 }
 
 function dungPhatLoiNhac(recordId) {
@@ -1017,6 +1032,7 @@ function dungPhatLoiNhac(recordId) {
     if (hien) {
         hien.dangChay = false;
         if (hien.timer) clearTimeout(hien.timer);
+        if (hien.lapTimer) clearInterval(hien.lapTimer);
         delete dangPhatLoaTheo[recordId];
         try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
     }
@@ -1033,6 +1049,13 @@ function hienThiTrangThaiNhacTrongNgan() {
     const nutDemo = document.getElementById("nutMoNganDemo");
     if (!box || soNganHienTai === null) return;
     const homNay = ngayHomNay();
+    // Không còn cấu hình ngăn thì không hiển thị lịch nhắc hiện tại.
+    // Lịch sử vẫn tồn tại ở trang Lịch sử và không bị xóa.
+    if (!duLieuNgan[soNganHienTai]) {
+        box.style.display = "none";
+        if (nutDemo) nutDemo.style.display = "none";
+        return;
+    }
     const rec = lichSu.find(x => Number(x.so_ngan) === Number(soNganHienTai) && x.ngay === homNay);
     if (!rec) {
         box.style.display = "none";
@@ -1089,7 +1112,13 @@ async function kiemTraLichNhac() {
             } catch (e) { console.warn("MEDBUDDY: không thể tạo lịch sử hằng ngày cho ngăn", n, e); }
         }
 
-        const canXuLy = lichSu.filter(x => x.ngay === homNay && (x.trang_thai === "cho_den_gio" || x.trang_thai === "dang_nhac" || !x.trang_thai) && x.gio_uong);
+        const canXuLy = lichSu.filter(x => {
+            const cauHinhNgan = duLieuNgan[Number(x.so_ngan)];
+            return !!cauHinhNgan
+                && x.ngay === homNay
+                && (x.trang_thai === "cho_den_gio" || x.trang_thai === "dang_nhac" || !x.trang_thai)
+                && x.gio_uong;
+        });
         for (const rec of canXuLy) {
             const thoiDiemHen = ghepThoiDiemNhac(rec.ngay, rec.gio_uong);
             if (!thoiDiemHen) continue;
