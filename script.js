@@ -19,6 +19,18 @@ let trangTruocThongTin = "quanLyNguoi";
 let nguoiTuNgan = null;
 let lichSuDangXem = null;
 
+/* =========================
+   V7 - LỊCH NHẮC + LỊCH SỬ THỰC HIỆN THUỐC
+========================= */
+const NHAC_TRANG_THAI_NHAN = {
+    cho_den_gio: "Chờ đến giờ",
+    dang_nhac: "Đang nhắc",
+    da_dung_thuoc: "Đã dùng thuốc",
+    chua_dung_thuoc: "Chưa dùng thuốc"
+};
+let dangKiemTraLichNhac = false;
+const dangPhatLoaTheo = {};
+
 const TRANG_THAI_KEY = `medbuddy_trang_thai_${maTu}`;
 // Dùng localStorage để trạng thái giao diện không bị mất khi reload/F5.
 // URL và dữ liệu tủ vẫn giữ nguyên theo mã tủ hiện tại.
@@ -30,12 +42,14 @@ function layFormHienTai() {
     const gio = document.getElementById("gioUong");
     const loi = document.getElementById("loiNhan");
     const nhac = document.getElementById("batNhac");
+    const lapLai = document.getElementById("lapLai");
     if (!nguoi || !gio || !loi || !nhac) return null;
     return {
         nguoiSuDung: nguoi.value || "",
         gioUong: gio.value || "",
         loiNhan: loi.value || "",
-        batNhac: !!nhac.checked
+        batNhac: !!nhac.checked,
+        lapLai: lapLai ? lapLai.value || "khong_lap" : "khong_lap"
     };
 }
 
@@ -85,6 +99,8 @@ async function khoiPhucTrangThai() {
                 document.getElementById("gioUong").value = state.form.gioUong || "";
                 document.getElementById("loiNhan").value = state.form.loiNhan || "";
                 document.getElementById("batNhac").checked = state.form.batNhac !== false;
+                const lapLaiEl = document.getElementById("lapLai");
+                if (lapLaiEl) lapLaiEl.value = state.form.lapLai || "khong_lap";
                 hienThiHoSoTrongNgan(state.form.nguoiSuDung || "");
             }
             if (state.mode === "input") {
@@ -264,7 +280,7 @@ function hienThiHoSoTrongNgan(id) {
 }
 
 function datKhoaForm(khoa) {
-    ["nguoiSuDung", "gioUong", "loiNhan", "batNhac"].forEach(id => {
+    ["nguoiSuDung", "gioUong", "loiNhan", "batNhac", "lapLai"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.disabled = khoa;
     });
@@ -303,7 +319,8 @@ async function taiDuLieuTuDB() {
             nguoiSuDung: x.nguoi_su_dung_id,
             gioUong: x.gio_uong || "",
             loiNhan: x.loi_nhan || "",
-            batNhac: x.bat_nhac !== false
+            batNhac: x.bat_nhac !== false,
+            lapLai: x.lap_lai || "khong_lap"
         };
     });
 
@@ -314,6 +331,7 @@ async function taiDuLieuTuDB() {
     hienThiDanhSachNguoi();
     hienThiDuLieuNgan();
     if (document.getElementById("lichSu").style.display !== "none") hienThiLichSu();
+    if (soNganHienTai !== null && document.getElementById("caiDat")?.style.display !== "none") hienThiTrangThaiNhacTrongNgan();
 }
 
 async function khoiTaoDuLieu() {
@@ -360,8 +378,10 @@ async function moNgan(n) {
     document.getElementById("gioUong").value = d?.gioUong || "";
     document.getElementById("loiNhan").value = d?.loiNhan || "";
     document.getElementById("batNhac").checked = d?.batNhac !== false;
+    document.getElementById("lapLai").value = d?.lapLai || "khong_lap";
     hienThiHoSoTrongNgan(d?.nguoiSuDung || "");
     capNhatNutNgap();
+    hienThiTrangThaiNhacTrongNgan();
     luuTrangThai("caiDat");
 }
 
@@ -382,7 +402,8 @@ function layForm() {
         nguoiSuDung: document.getElementById("nguoiSuDung").value || null,
         gioUong: document.getElementById("gioUong").value,
         loiNhan: document.getElementById("loiNhan").value.trim(),
-        batNhac: document.getElementById("batNhac").checked
+        batNhac: document.getElementById("batNhac").checked,
+        lapLai: document.getElementById("lapLai").value || "khong_lap"
     };
 }
 
@@ -433,7 +454,7 @@ async function luuMoi() {
         let slot;
         if (oldSlot) {
             const r = await db.from("ngan_thuoc")
-                .update({ nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, updated_at: new Date().toISOString() })
+                .update({ nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai, updated_at: new Date().toISOString() })
                 .eq("id", oldSlot.id)
                 .select()
                 .single();
@@ -441,7 +462,7 @@ async function luuMoi() {
             slot = r.data;
         } else {
             const r = await db.from("ngan_thuoc")
-                .insert({ ma_tu: maTu, so_ngan: soNganHienTai, nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac })
+                .insert({ ma_tu: maTu, so_ngan: soNganHienTai, nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai })
                 .select()
                 .single();
             if (r.error) throw r.error;
@@ -456,7 +477,11 @@ async function luuMoi() {
             ten_nguoi: n?.ten || "Chưa có thông tin",
             gio_uong: d.gioUong,
             loi_nhan: d.loiNhan,
-            bat_nhac: d.batNhac
+            bat_nhac: d.batNhac,
+            ngay: ngayHomNay(),
+            lap_lai: d.lapLai,
+            trang_thai: "cho_den_gio",
+            so_lan_nhac: 0
         }).select().single();
         if (historyResult.error) throw historyResult.error;
 
@@ -489,6 +514,7 @@ function huyChinhSuaNgan() {
         document.getElementById("gioUong").value = d.gioUong || "";
         document.getElementById("loiNhan").value = d.loiNhan || "";
         document.getElementById("batNhac").checked = d.batNhac !== false;
+        document.getElementById("lapLai").value = d.lapLai || "khong_lap";
         hienThiHoSoTrongNgan(d.nguoiSuDung);
     }
     dangChinhSuaNgan = false;
@@ -506,32 +532,38 @@ async function luuChinhSuaNgan() {
 
     try {
         const r = await db.from("ngan_thuoc")
-            .update({ nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, updated_at: new Date().toISOString() })
+            .update({ nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai, updated_at: new Date().toISOString() })
             .eq("id", old.id)
             .select()
             .single();
         if (r.error) throw r.error;
 
-        const { data: latest, error: historyFindError } = await db.from("lich_su")
-            .select("id")
+        // Chỉ cập nhật bản ghi lịch sử của HÔM NAY, và chỉ khi nó chưa xảy ra nhắc (còn "Chờ đến giờ").
+        // Lịch sử đã hoàn tất (Đang nhắc / Đã dùng thuốc / Chưa dùng thuốc) không bị chỉnh sửa ngược lại.
+        const homNay = ngayHomNay();
+        const { data: banGhiHomNay, error: historyFindError } = await db.from("lich_su")
+            .select("*")
             .eq("ma_tu", maTu)
             .eq("so_ngan", soNganHienTai)
+            .eq("ngay", homNay)
             .order("updated_at", { ascending: false })
             .limit(1);
         if (historyFindError) throw historyFindError;
 
         const n = layNguoi(d.nguoiSuDung);
-        if (latest?.length) {
+        const banGhi = banGhiHomNay?.[0];
+        if (banGhi && (!banGhi.trang_thai || banGhi.trang_thai === "cho_den_gio")) {
             const hr = await db.from("lich_su").update({
                 nguoi_su_dung_id: d.nguoiSuDung,
                 ten_nguoi: n?.ten || "Chưa có thông tin",
                 gio_uong: d.gioUong,
                 loi_nhan: d.loiNhan,
                 bat_nhac: d.batNhac,
+                lap_lai: d.lapLai,
                 updated_at: new Date().toISOString()
-            }).eq("id", latest[0].id);
+            }).eq("id", banGhi.id);
             if (hr.error) throw hr.error;
-        } else {
+        } else if (!banGhi) {
             const hr = await db.from("lich_su").insert({
                 ma_tu: maTu,
                 so_ngan: soNganHienTai,
@@ -539,10 +571,15 @@ async function luuChinhSuaNgan() {
                 ten_nguoi: n?.ten || "Chưa có thông tin",
                 gio_uong: d.gioUong,
                 loi_nhan: d.loiNhan,
-                bat_nhac: d.batNhac
+                bat_nhac: d.batNhac,
+                ngay: homNay,
+                lap_lai: d.lapLai,
+                trang_thai: "cho_den_gio",
+                so_lan_nhac: 0
             });
             if (hr.error) throw hr.error;
         }
+        // Nếu bản ghi hôm nay đã "Đang nhắc"/"Đã dùng thuốc"/"Chưa dùng thuốc" thì giữ nguyên, không sửa.
 
         await taiDuLieuTuDB();
         dangChinhSuaNgan = false;
@@ -777,6 +814,7 @@ function xoaNguoi() {
    HIỂN THỊ NGĂN + LỊCH SỬ
 ========================= */
 function hienThiDuLieuNgan() {
+    const homNay = ngayHomNay();
     for (let i = 1; i <= 16; i++) {
         const o = document.getElementById("thongTin" + i);
         if (!o) continue;
@@ -787,7 +825,14 @@ function hienThiDuLieuNgan() {
             o.innerHTML = "Chưa có thông tin";
         } else {
             o.className = "da-cai-dat";
-            o.innerHTML = `${escapeHTML(n.ten)}<br><b>◷ ${escapeHTML(d.gioUong || "")}</b><br><span>✓ Đã cài đặt</span>`;
+            const rec = lichSu.find(x => Number(x.so_ngan) === i && x.ngay === homNay);
+            let dong3 = "✓ Đã cài đặt";
+            if (rec) {
+                if (rec.trang_thai === "dang_nhac") dong3 = "🔊 Đang nhắc";
+                else if (rec.trang_thai === "chua_dung_thuoc") dong3 = "⚠ Chưa dùng thuốc";
+                else if (rec.trang_thai === "da_dung_thuoc") dong3 = "✓ Đã dùng thuốc";
+            }
+            o.innerHTML = `${escapeHTML(n.ten)}<br><b>◷ ${escapeHTML(d.gioUong || "")}</b><br><span>${dong3}</span>`;
         }
     }
 }
@@ -825,6 +870,8 @@ function hienThiLichSu() {
         const d = document.createElement("button");
         d.type = "button";
         d.className = "history-item";
+        const lop = lopTrangThaiNhac(x.trang_thai);
+        const nhan = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "";
         d.innerHTML = `
             <div class="history-item-top">
                 <div><h3>MED 1 - ${escapeHTML(tenNgan(Number(x.so_ngan)))}</h3><span class="history-time">${escapeHTML(dinhDangNgayGio(x.created_at || x.updated_at))}</span></div>
@@ -833,6 +880,7 @@ function hienThiLichSu() {
             <p><strong>Người sử dụng:</strong> ${escapeHTML(x.ten_nguoi || "Chưa có thông tin")}</p>
             <p><strong>Giờ uống:</strong> ${escapeHTML(x.gio_uong || "Chưa có thông tin")}</p>
             <span class="history-badge ${x.bat_nhac === false ? "off" : ""}">${x.bat_nhac === false ? "Nhắc nhở tắt" : "Nhắc nhở bật"}</span>
+            ${nhan ? ` <span class="status-pill ${lop}">${escapeHTML(nhan)}</span>` : ""}
             <span class="history-hint">Bấm để xem chi tiết</span>`;
         d.onclick = () => xemLichSu(x.id);
         box.appendChild(d);
@@ -856,6 +904,8 @@ function xemLichSu(id) {
     document.getElementById("tieuDeLichSu").textContent = `MED 1 - ${tenNgan(Number(x.so_ngan))} • ${dinhDangNgayGio(x.created_at || x.updated_at)}`;
 
     const n = layNguoi(x.nguoi_su_dung_id);
+    const lop = lopTrangThaiNhac(x.trang_thai);
+    const nhanTrangThai = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "Chờ đến giờ";
     const wrap = document.getElementById("noiDungXemLichSu");
     wrap.innerHTML = `
         <div class="history-view-grid">
@@ -864,6 +914,10 @@ function xemLichSu(id) {
             <div class="view-field"><strong>Giờ uống</strong>${escapeHTML(x.gio_uong || "Chưa có thông tin")}</div>
             <div class="view-field"><strong>Lời nhắn</strong>${escapeHTML(x.loi_nhan || "Chưa có thông tin")}</div>
             <div class="view-field"><strong>Nhắc nhở</strong>${x.bat_nhac === false ? "Đang tắt" : "Đang bật"}</div>
+            <div class="view-field"><strong>Lặp lại</strong>${x.lap_lai === "hang_ngay" ? "Hằng ngày" : "Không lặp"}</div>
+            <div class="view-field"><strong>Trạng thái</strong><span class="status-pill ${lop}">${escapeHTML(nhanTrangThai)}</span></div>
+            <div class="view-field"><strong>Số lần đã nhắc</strong>${Number(x.so_lan_nhac) || 0} / 3</div>
+            <div class="view-field"><strong>Thời điểm mở ngăn</strong>${x.thoi_diem_mo_ngan ? escapeHTML(dinhDangNgayGio(x.thoi_diem_mo_ngan)) : "Chưa mở"}</div>
             <div class="view-field"><strong>Ngăn thuốc</strong>MED 1 - ${escapeHTML(tenNgan(Number(x.so_ngan)))}</div>
         </div>`;
 
@@ -877,9 +931,230 @@ function quayLaiLichSu() {
     moLichSu();
 }
 
+/* =========================
+   V7 - ĐỘNG CƠ LỊCH NHẮC + XÁC NHẬN MỞ NGĂN
+   Toàn bộ trạng thái nhắc được tính lại từ (ngày + giờ uống) mỗi lần kiểm tra,
+   nên hoạt động đúng dù tải lại trang / nhiều thiết bị cùng mở tủ.
+========================= */
+function lopTrangThaiNhac(trangThai) {
+    if (trangThai === "da_dung_thuoc") return "status-da";
+    if (trangThai === "chua_dung_thuoc") return "status-chua";
+    if (trangThai === "dang_nhac") return "status-dang";
+    return "status-cho";
+}
+
+function ngayHomNay() {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+function ghepThoiDiemNhac(ngay, gio) {
+    if (!ngay || !gio) return null;
+    // MEDBUDDY dùng giờ Việt Nam (UTC+07) thống nhất trên mọi thiết bị.
+    const d = new Date(`${ngay}T${gio.slice(0, 5)}:00+07:00`);
+    return isNaN(d) ? null : d;
+}
+
+/* Cơ chế nhắc 3 lần, mỗi lần phát 1 phút, chờ 5 phút giữa các lần (chu kỳ 6 phút/lần). */
+function tinhGiaiDoanNhac(thoiDiemHen, now) {
+    const diffPhut = (now.getTime() - thoiDiemHen.getTime()) / 60000;
+    if (diffPhut < 0) return { trangThai: "cho_den_gio", soLan: 0, dangPhat: false, ketThucPhat: null, hoanTat: false };
+    if (diffPhut < 1) return { trangThai: "dang_nhac", soLan: 1, dangPhat: true, ketThucPhat: thoiDiemHen.getTime() + 1 * 60000, hoanTat: false };
+    if (diffPhut < 6) return { trangThai: "dang_nhac", soLan: 1, dangPhat: false, ketThucPhat: null, hoanTat: false };
+    if (diffPhut < 7) return { trangThai: "dang_nhac", soLan: 2, dangPhat: true, ketThucPhat: thoiDiemHen.getTime() + 7 * 60000, hoanTat: false };
+    if (diffPhut < 12) return { trangThai: "dang_nhac", soLan: 2, dangPhat: false, ketThucPhat: null, hoanTat: false };
+    if (diffPhut < 13) return { trangThai: "dang_nhac", soLan: 3, dangPhat: true, ketThucPhat: thoiDiemHen.getTime() + 13 * 60000, hoanTat: false };
+    return { trangThai: "chua_dung_thuoc", soLan: 3, dangPhat: false, ketThucPhat: null, hoanTat: true };
+}
+
+function phatLoiNhac(recordId, text, ketThuc) {
+    const hien = dangPhatLoaTheo[recordId];
+    if (hien && hien.dangChay) return;
+    if (!window.speechSynthesis) return;
+
+    const state = { dangChay: true, ketThuc, timer: null };
+    dangPhatLoaTheo[recordId] = state;
+
+    // Bảo đảm chu kỳ phát kết thúc đúng sau 1 phút, kể cả khi trình duyệt
+    // không gọi onend của SpeechSynthesis đúng thời điểm.
+    state.timer = setTimeout(() => dungPhatLoiNhac(recordId), Math.max(0, ketThuc - Date.now()));
+
+    const noiTiep = () => {
+        const trangThaiHien = dangPhatLoaTheo[recordId];
+        if (!trangThaiHien || !trangThaiHien.dangChay) return;
+        if (Date.now() >= trangThaiHien.ketThuc) {
+            dungPhatLoiNhac(recordId);
+            return;
+        }
+        try {
+            const u = new SpeechSynthesisUtterance(text || "Đã đến giờ uống thuốc");
+            u.lang = "vi-VN";
+            u.onend = noiTiep;
+            u.onerror = noiTiep;
+            window.speechSynthesis.speak(u);
+        } catch (e) {
+            dungPhatLoiNhac(recordId);
+        }
+    };
+    noiTiep();
+}
+
+function dungPhatLoiNhac(recordId) {
+    const hien = dangPhatLoaTheo[recordId];
+    if (hien) {
+        hien.dangChay = false;
+        if (hien.timer) clearTimeout(hien.timer);
+        delete dangPhatLoaTheo[recordId];
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+    }
+}
+
+function capNhatHienThiSauLichNhac() {
+    hienThiDuLieuNgan();
+    if (document.getElementById("lichSu")?.style.display !== "none") hienThiLichSu();
+    if (soNganHienTai !== null && document.getElementById("caiDat")?.style.display !== "none") hienThiTrangThaiNhacTrongNgan();
+}
+
+function hienThiTrangThaiNhacTrongNgan() {
+    const box = document.getElementById("trangThaiNhacHomNay");
+    const nutDemo = document.getElementById("nutMoNganDemo");
+    if (!box || soNganHienTai === null) return;
+    const homNay = ngayHomNay();
+    const rec = lichSu.find(x => Number(x.so_ngan) === Number(soNganHienTai) && x.ngay === homNay);
+    if (!rec) {
+        box.style.display = "none";
+        if (nutDemo) nutDemo.style.display = "none";
+        return;
+    }
+    const nhan = NHAC_TRANG_THAI_NHAN[rec.trang_thai] || "Chờ đến giờ";
+    const lop = lopTrangThaiNhac(rec.trang_thai);
+    box.style.display = "flex";
+    box.innerHTML = `<div><strong>Lịch nhắc hôm nay</strong><small>Giờ nhắc ${escapeHTML(rec.gio_uong || "")}${rec.thoi_diem_mo_ngan ? " • Mở ngăn lúc " + escapeHTML(dinhDangThoiGian(rec.thoi_diem_mo_ngan)) : ""}</small></div><span class="status-pill ${lop}">${escapeHTML(nhan)}</span>`;
+    if (nutDemo) nutDemo.style.display = (rec.trang_thai === "cho_den_gio" || rec.trang_thai === "dang_nhac") ? "inline-flex" : "none";
+}
+
+/* Kiểm tra định kỳ: (1) tự tạo lịch sử mới cho ngăn "Hằng ngày" khi sang ngày mới,
+   (2) cập nhật trạng thái/số lần nhắc của lịch sử hôm nay dựa trên giờ hiện tại,
+   (3) phát loa đúng khung giờ đang nhắc. */
+async function kiemTraLichNhac() {
+    if (dangKiemTraLichNhac || !db) return;
+    dangKiemTraLichNhac = true;
+    try {
+        // Đồng bộ lịch sử mới nhất từ Supabase trước mỗi vòng kiểm tra.
+        // Nhờ vậy các thiết bị A/B nhìn thấy trạng thái do thiết bị còn lại cập nhật.
+        const { data: historyFresh, error: historyFreshError } = await db.from("lich_su")
+            .select("*").eq("ma_tu", maTu).order("updated_at", { ascending: false });
+        if (historyFreshError) throw historyFreshError;
+        lichSu = historyFresh || [];
+
+        const homNay = ngayHomNay();
+        const now = new Date();
+
+        for (let n = 1; n <= 16; n++) {
+            const d = duLieuNgan[n];
+            if (!d || !d.id || d.lapLai !== "hang_ngay" || !d.gioUong) continue;
+            const daCo = lichSu.some(x => Number(x.so_ngan) === n && x.ngay === homNay);
+            if (daCo) continue;
+            const nguoi = layNguoi(d.nguoiSuDung);
+            try {
+                const r = await db.from("lich_su").insert({
+                    ma_tu: maTu, so_ngan: n, nguoi_su_dung_id: d.nguoiSuDung,
+                    ten_nguoi: nguoi?.ten || "Chưa có thông tin", gio_uong: d.gioUong,
+                    loi_nhan: d.loiNhan, bat_nhac: d.batNhac, ngay: homNay,
+                    lap_lai: d.lapLai, trang_thai: "cho_den_gio", so_lan_nhac: 0
+                }).select().single();
+                if (!r.error && r.data) { lichSu.unshift(r.data); capNhatHienThiSauLichNhac(); }
+            } catch (e) { console.warn("MEDBUDDY: không thể tạo lịch sử hằng ngày cho ngăn", n, e); }
+        }
+
+        const canXuLy = lichSu.filter(x => x.ngay === homNay && (x.trang_thai === "cho_den_gio" || x.trang_thai === "dang_nhac" || !x.trang_thai) && x.gio_uong);
+        for (const rec of canXuLy) {
+            const thoiDiemHen = ghepThoiDiemNhac(rec.ngay, rec.gio_uong);
+            if (!thoiDiemHen) continue;
+            const giaiDoan = tinhGiaiDoanNhac(thoiDiemHen, now);
+
+            if (giaiDoan.trangThai !== (rec.trang_thai || "cho_den_gio") || giaiDoan.soLan !== (rec.so_lan_nhac || 0)) {
+                const capNhat = { trang_thai: giaiDoan.trangThai, so_lan_nhac: giaiDoan.soLan };
+                if (giaiDoan.hoanTat) capNhat.thoi_diem_hoan_tat = now.toISOString();
+                try {
+                    const { error } = await db.from("lich_su").update(capNhat).eq("id", rec.id);
+                    if (!error) { Object.assign(rec, capNhat); capNhatHienThiSauLichNhac(); }
+                } catch (e) { console.warn("MEDBUDDY: không thể cập nhật trạng thái nhắc:", e); }
+            }
+
+            const batNhacNgan = rec.bat_nhac !== false;
+            if (giaiDoan.dangPhat && batNhacNgan) {
+                phatLoiNhac(rec.id, rec.loi_nhan, giaiDoan.ketThucPhat);
+            } else {
+                dungPhatLoiNhac(rec.id);
+            }
+        }
+    } finally {
+        dangKiemTraLichNhac = false;
+    }
+}
+
+/* Điểm kết nối cho cảm biến mở cửa của tủ thuốc trong tương lai.
+   Việc xác nhận đã uống thuốc dựa vào sự kiện mở ngăn, không dựa vào nút bấm trên web. */
+async function medbuddyGhiNhanMoNgan(soNgan) {
+    if (!db) return;
+    const homNay = ngayHomNay();
+
+    // Luôn đọc lại từ Supabase trước khi xác nhận để thiết bị A/B dùng cùng
+    // một bản ghi, thay vì phụ thuộc vào bản sao lichSu cũ trên trình duyệt.
+    const { data: rec, error: findError } = await db.from("lich_su")
+        .select("*")
+        .eq("ma_tu", maTu)
+        .eq("so_ngan", soNgan)
+        .eq("ngay", homNay)
+        .in("trang_thai", ["cho_den_gio", "dang_nhac"])
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (findError) {
+        console.error("MEDBUDDY: không thể đọc lịch nhắc trước khi xác nhận mở ngăn:", findError);
+        return;
+    }
+    if (!rec) {
+        console.warn("MEDBUDDY: không tìm thấy lịch nhắc đang hoạt động cho ngăn", soNgan);
+        return;
+    }
+
+    dungPhatLoiNhac(rec.id);
+    const thoiDiem = new Date().toISOString();
+    try {
+        const { data: updated, error } = await db.from("lich_su").update({
+            trang_thai: "da_dung_thuoc",
+            thoi_diem_mo_ngan: thoiDiem,
+            thoi_diem_hoan_tat: thoiDiem
+        }).eq("id", rec.id)
+          .in("trang_thai", ["cho_den_gio", "dang_nhac"])
+          .select()
+          .maybeSingle();
+        if (error) throw error;
+
+        // Nếu thiết bị khác vừa xác nhận trước đó thì không tạo trạng thái
+        // mâu thuẫn; lần đọc kế tiếp sẽ đồng bộ dữ liệu từ DB.
+        if (updated) {
+            const local = lichSu.find(x => x.id === rec.id);
+            if (local) Object.assign(local, updated);
+            else lichSu.unshift(updated);
+            capNhatHienThiSauLichNhac();
+        }
+    } catch (err) {
+        console.error("MEDBUDDY: ghi nhận mở ngăn thất bại:", err);
+    }
+}
+window.medbuddyGhiNhanMoNgan = medbuddyGhiNhanMoNgan;
+
+/* Nút mô phỏng dùng để kiểm thử khi chưa có cảm biến phần cứng thật. */
+function moNganDemo() {
+    if (soNganHienTai === null) return;
+    medbuddyGhiNhanMoNgan(soNganHienTai);
+}
 
 function ganSuKienLuuTrangThai() {
-    ["nguoiSuDung", "gioUong", "loiNhan", "batNhac"].forEach(id => {
+    ["nguoiSuDung", "gioUong", "loiNhan", "batNhac", "lapLai"].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener("input", () => {
@@ -940,6 +1215,10 @@ window.addEventListener("DOMContentLoaded", () => {
                 await khoiTaoDuLieu();
             }
             await khoiPhucTrangThai();
+            if (db) {
+                kiemTraLichNhac();
+                setInterval(kiemTraLichNhac, 5000);
+            }
         } catch (err) {
             console.error("Không thể khởi tạo MEDBUDDY:", err);
             // Không ép về trang chủ khi F5. Nếu khôi phục thất bại, giữ trang bootstrap đã chọn.

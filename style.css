@@ -2,6 +2,17 @@
 
 /* ===== V7 - tinh chỉnh giao diện tra cứu / hồ sơ / menu ===== */
 .brand-button{border:0;background:transparent;padding:0;text-align:left;cursor:pointer;color:inherit;font:inherit;display:flex;align-items:center;gap:12px}.brand-button:hover{opacity:.92}.brand-button:focus-visible{outline:2px solid #4ca3d8;outline-offset:4px;border-radius:12px}
+
+/* ===== V7 - lịch nhắc + lịch sử thực hiện thuốc ===== */
+.reminder-status-box{margin-top:12px;padding:13px 15px;border-radius:14px;background:#f4f8fb;border:1px solid #dce9f2;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.reminder-status-box strong{display:block}
+.reminder-status-box small{color:#71879a;display:block;margin-top:2px}
+.status-pill{display:inline-block;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.status-cho{background:#eef2f5;color:#5c6b78}
+.status-dang{background:#fff0cf;color:#a46a00}
+.status-da{background:#dff5e8;color:#237c49}
+.status-chua{background:#ffe4e4;color:#c53b3b}
+.demo-open-btn{background:#fff7e6;color:#a46a00;border:1px solid #ffe2ad}
 .menu-tu-select{display:block;margin-top:6px;width:190px;padding:7px 30px 7px 10px;border:1px solid #d5e4ed;border-radius:9px;background:#f5faff;color:#2d668b;font-weight:700;font-size:14px;cursor:pointer}
 .menu-head{align-items:flex-start}.menu-head>button{cursor:pointer}
 .search-card{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #dce9f2;border-radius:16px;padding:10px 12px;margin-bottom:16px;box-shadow:0 5px 18px rgba(40,100,140,.06)}.search-icon{width:34px;height:34px;border-radius:10px;background:#eef7fd;color:#1681c9;display:grid;place-items:center;font-size:22px;flex:0 0 auto}.search-card input{width:100%;border:0;outline:0;background:transparent;color:#244b68;font-size:15px;padding:7px}.search-card input::placeholder{color:#8aa0af}.history-search{display:grid;grid-template-columns:1fr 220px auto}.search-field{display:flex;align-items:center;gap:8px;min-width:0}.clear-search-btn{border:0;background:#edf3f7;color:#44657c;border-radius:10px;padding:9px 13px;cursor:pointer}.clear-search-btn:hover{background:#e1edf4}
