@@ -18,6 +18,9 @@ let nguoiTuNgan = null;
 let lichSuDangXem = null;
 
 const TRANG_THAI_KEY = `medbuddy_trang_thai_${maTu}`;
+// Dùng localStorage để trạng thái giao diện không bị mất khi reload/F5.
+// URL và dữ liệu tủ vẫn giữ nguyên theo mã tủ hiện tại.
+const TRANG_THAI_VERSION = 2;
 let dangKhoiPhucTrang = false;
 
 function layFormHienTai() {
@@ -37,6 +40,7 @@ function layFormHienTai() {
 function luuTrangThai(view) {
     try {
         const state = {
+            version: TRANG_THAI_VERSION,
             view,
             soNgan: soNganHienTai,
             nguoiDangXem,
@@ -46,19 +50,19 @@ function luuTrangThai(view) {
             mode: dangChinhSuaNgan ? "edit" : dangNhap ? "input" : "view",
             form: view === "caiDat" ? layFormHienTai() : null
         };
-        sessionStorage.setItem(TRANG_THAI_KEY, JSON.stringify(state));
+        localStorage.setItem(TRANG_THAI_KEY, JSON.stringify(state));
     } catch (e) {
         console.warn("Không thể lưu trạng thái giao diện:", e);
     }
 }
 
 function xoaTrangThai() {
-    try { sessionStorage.removeItem(TRANG_THAI_KEY); } catch (e) {}
+    try { localStorage.removeItem(TRANG_THAI_KEY); } catch (e) {}
 }
 
 async function khoiPhucTrangThai() {
     let state = null;
-    try { state = JSON.parse(sessionStorage.getItem(TRANG_THAI_KEY) || "null"); } catch (e) {}
+    try { state = JSON.parse(localStorage.getItem(TRANG_THAI_KEY) || "null"); } catch (e) {}
     if (!state || !state.view || state.view === "trangChinh") {
         veTrangChinh();
         return;
@@ -884,6 +888,43 @@ function ganSuKienLuuTrangThai() {
         });
     });
 }
+
+function luuTrangThaiTruocKhiReload() {
+    try {
+        const ids = [
+            ["caiDat", "caiDat"],
+            ["quanLyNguoi", "quanLyNguoi"],
+            ["thongTinNguoiQuanLy", "thongTinNguoiQuanLy"],
+            ["themNguoi", "themNguoi"],
+            ["lichSu", "lichSu"],
+            ["trangChinh", "trangChinh"]
+        ];
+        let view = "trangChinh";
+        for (const [id, name] of ids) {
+            const el = document.getElementById(id);
+            if (el && el.style.display !== "none") { view = name; break; }
+        }
+        if (document.getElementById("xemLichSu")?.style.display !== "none") view = "xemLichSu";
+
+        if (view === "caiDat") {
+            luuTrangThai("caiDat");
+        } else if (view === "quanLyNguoi") {
+            luuTrangThai("quanLyNguoi");
+        } else if (view === "thongTinNguoiQuanLy") {
+            luuTrangThai("thongTinNguoiQuanLy");
+        } else if (view === "themNguoi") {
+            luuTrangThai("themNguoi");
+        } else if (view === "lichSu") {
+            luuTrangThai("lichSu");
+        } else if (view === "xemLichSu") {
+            luuTrangThai("xemLichSu");
+        }
+    } catch (e) {
+        console.warn("Không thể lưu trang trước khi reload:", e);
+    }
+}
+
+window.addEventListener("beforeunload", luuTrangThaiTruocKhiReload);
 
 window.addEventListener("DOMContentLoaded", () => {
     const q = document.getElementById("maTuHienThi");
