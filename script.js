@@ -933,7 +933,17 @@ window.addEventListener("DOMContentLoaded", () => {
     if (menuTu) menuTu.value = maTu;
     ganSuKienLuuTrangThai();
     (async () => {
-        await khoiTaoDuLieu();
-        await khoiPhucTrangThai();
+        try {
+            await khoiTaoDuLieu();
+            await khoiPhucTrangThai();
+        } catch (err) {
+            console.error("Không thể khởi tạo MEDBUDDY:", err);
+            veTrangChinh();
+        } finally {
+            // Chỉ cho phần nội dung hiện ra sau khi đã khôi phục đúng trang.
+            // Nhờ vậy F5 không còn chớp Trang chủ 1-2 giây trước khi về trang đang dùng.
+            document.body.classList.remove("app-loading");
+            document.body.classList.add("app-ready");
+        }
     })();
 });

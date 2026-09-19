@@ -180,3 +180,36 @@
     .history-search-card { grid-template-columns: 1fr; }
     .history-search-card .clear-search-btn { min-height: 48px; }
 }
+
+
+/* ===== V10 - không chớp trang chủ khi F5 + tăng độ tương phản hồ sơ ===== */
+/* Tên người và mô tả trong danh sách không còn bị rule span chung làm mờ. */
+.person-row-main > span:last-child {
+    color: #173f67 !important;
+}
+.person-row-main > span:last-child strong {
+    color: #174f78 !important;
+    font-weight: 700;
+}
+.person-row-main > span:last-child small {
+    color: #4f6f86 !important;
+    font-weight: 400;
+}
+.person-row > span:last-child {
+    color: #4d6b80 !important;
+    font-size: 13px;
+}
+.search-label strong {
+    color: #174f78 !important;
+    font-weight: 700;
+}
+.search-label small {
+    color: #58748a !important;
+}
+.person-search-card input {
+    color: #214f70 !important;
+}
+.person-search-card input::placeholder {
+    color: #627d91 !important;
+    opacity: 1;
+}
