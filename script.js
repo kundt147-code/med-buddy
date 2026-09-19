@@ -944,10 +944,8 @@ function hienThiDuLieuNgan() {
 
 function hienThiTongQuanHomNay() {
     const stats = document.getElementById("todayStats");
-    const summaryList = document.getElementById("todaySummaryList");
     const compliance = document.getElementById("complianceSummary");
-    const summaryDate = document.getElementById("historySummaryDate");
-    if (!stats && !summaryList && !compliance) return;
+    if (!stats && !compliance) return;
 
     const homNay = ngayHomNay();
     const ds = lichSu
@@ -957,22 +955,15 @@ function hienThiTongQuanHomNay() {
     const daDung = ds.filter(x => x.trang_thai === "da_dung_thuoc").length;
     const chuaDung = ds.filter(x => x.trang_thai === "chua_dung_thuoc").length;
     const dangNhac = ds.filter(x => x.trang_thai === "dang_nhac").length;
+    const choUong = ds.filter(x => !x.trang_thai || x.trang_thai === "cho_den_gio").length;
 
     if (stats) {
         stats.innerHTML = `
             <span class="summary-stat done"><b>${daDung}</b> đã dùng</span>
             <span class="summary-stat missed"><b>${chuaDung}</b> chưa dùng</span>
-            <span class="summary-stat active"><b>${dangNhac}</b> đang nhắc</span>`;
+            <span class="summary-stat active"><b>${dangNhac}</b> đang nhắc</span>
+            <span class="summary-stat waiting"><b>${choUong}</b> chờ uống</span>`;
     }
-
-    if (summaryDate) {
-        const d = new Date(`${homNay}T00:00:00`);
-        summaryDate.textContent = isNaN(d) ? homNay : d.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
-    }
-
-    // Trang Lịch sử chỉ dùng phần tổng hợp để hiển thị số liệu;
-    // danh sách từng lần uống được quản lý bên dưới theo từng ngày.
-    if (summaryList) summaryList.innerHTML = "";
 
     if (compliance) {
         const now = new Date();
