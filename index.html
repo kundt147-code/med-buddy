@@ -53,7 +53,7 @@ html[data-med-view="xemLichSu"] #xemLichSu { display:block !important; }
 <aside id="sideMenu" class="side-menu">
   <div class="menu-head"><div><strong>MENU</strong><select id="menuTuSelector" class="menu-tu-select" aria-label="Chọn tủ"><option value="MEDBUDDY-1">MEDBUDDY-1</option></select></div><button type="button" onclick="dongMenu()" aria-label="Đóng menu">×</button></div>
   <button type="button" onclick="veTrangChinh();dongMenu()"><span class="menu-icon">⌂</span><span>Trang chủ</span></button>
-  <button type="button" onclick="moLichSu();dongMenu()"><span class="menu-icon">◴</span><span>Lịch sử</span></button>
+  <button type="button" onclick="moLichSu();dongMenu()"><span class="menu-icon">◷</span><span>Lịch sử</span></button>
   <button type="button" onclick="moQuanLyNguoi();dongMenu()"><span class="menu-icon">♙</span><span>Thông tin người sử dụng</span></button>
   <button type="button" onclick="baoDangPhatTrien();dongMenu()"><span class="menu-icon">⚙</span><span>Cài đặt</span></button>
 </aside>
@@ -62,11 +62,6 @@ html[data-med-view="xemLichSu"] #xemLichSu { display:block !important; }
 <section id="trangChinh" class="page">
   <div class="page-heading"><div><h2>MEDBUDDY-1</h2><p>Chọn ngăn thuốc cần cài đặt</p></div></div>
   <div class="qr-card"><div class="qr-text"><h3>Mã QR của tủ</h3><p>Quét mã để mở tủ MEDBUDDY-1</p><strong>MEDBUDDY-1</strong></div><div class="ma-qr"><img src="qr-medbuddy-1.png" alt="QR MEDBUDDY-1"></div></div>
-  <section class="today-overview" aria-label="Lịch uống thuốc hôm nay">
-    <div class="today-overview-head"><div><span class="section-kicker">THEO DÕI HÔM NAY</span><h3>Lịch uống thuốc</h3><p>Trạng thái được cập nhật từ các lần nhắc và mở ngăn.</p></div><div id="todayStats" class="today-stats"></div></div>
-    <div id="todaySchedule" class="today-schedule"><div class="today-empty">Chưa có lịch uống thuốc hôm nay.</div></div>
-    <div id="complianceSummary" class="compliance-summary"></div>
-  </section>
   <div id="tuThuoc" class="tu-thuoc">
     <div class="buoi-label sang"><span>☀</span><strong>Sáng</strong></div>
     <button class="ngan ngan-sang" onclick="moNgan(1)"><span>Sáng 1</span><small id="thongTin1">Chưa có thông tin</small><i>✦</i></button>
@@ -117,7 +112,19 @@ html[data-med-view="xemLichSu"] #xemLichSu { display:block !important; }
 <section id="quanLyNguoi" class="page management-page" style="display:none"><button class="back-btn" onclick="dongQuanLyNguoi()">← Quay lại</button><div class="page-heading"><div><h2>Thông tin người sử dụng</h2><p>Tra cứu và quản lý những người đang sử dụng tủ</p></div><button class="primary-btn" onclick="moThemNguoi()">+ Thêm người</button></div><div class="search-card person-search-card"><div class="search-label"><span class="search-icon">⌕</span><div><strong>Tra cứu người sử dụng</strong><small>Nhập tên để tìm nhanh hồ sơ</small></div></div><input id="timNguoi" type="search" placeholder="Tên người sử dụng..." oninput="hienThiDanhSachNguoiQuanLy()"></div><div id="danhSachNguoiQuanLy" class="people-list"></div></section>
 <section id="thongTinNguoiQuanLy" class="page management-page" style="display:none"><button class="back-btn" onclick="quayLaiDanhSachNguoi()">← Quay lại</button><h2>Thông tin người sử dụng</h2><div class="person-card"><div id="khuVucThongTinNguoi"></div><div id="nutXemNguoi" class="person-actions"><button class="primary-btn" onclick="moChinhSuaNguoi()">Chỉnh sửa</button><button class="danger-btn" onclick="xoaNguoi()">Xóa</button></div><div id="nutSuaNguoi" class="person-actions" style="display:none"><button class="primary-btn" onclick="luuChinhSuaNguoi()">Lưu</button><button class="secondary-btn" onclick="huyChinhSuaNguoi()">Hủy</button></div></div></section>
 <section id="themNguoi" class="page management-page" style="display:none"><button class="back-btn" onclick="dongThemNguoi()">← Quay lại</button><h2>Thêm người sử dụng</h2><div class="person-card form-card"><label>Tên người sử dụng</label><input id="tenNguoiMoi"><label>Ngày sinh</label><input id="ngaySinhNguoiMoi" type="date"><small class="date-help">Ngày sinh sẽ hiển thị theo dạng dd/mm/yyyy</small><label>Tình trạng bệnh</label><input id="benhNguoiMoi"><label>⚠ Dị ứng thuốc</label><textarea id="diUngNguoiMoi" class="allergy-input" placeholder="Nhập tên thuốc/chất đã biết dị ứng, cách nhau bằng dấu phẩy"></textarea><label>Các loại thuốc đang dùng</label><textarea id="thuocNguoiMoi"></textarea><label>Ghi chú</label><textarea id="ghiChuNguoiMoi"></textarea><div class="form-actions"><button class="primary-btn" onclick="themNguoi()">Thêm người</button><button class="secondary-btn" onclick="dongThemNguoi()">Hủy</button></div></div></section>
-<section id="lichSu" class="page management-page" style="display:none"><div class="page-heading"><div><h2>Lịch sử</h2><p>Bấm vào một dòng để xem lại đúng thông tin đã nhập lúc đó.</p></div></div><div class="history-search-card"><div class="search-field"><span class="search-icon">⌕</span><div><label for="timLichSuTen">Theo tên</label><input id="timLichSuTen" type="search" placeholder="Tên người sử dụng..." oninput="hienThiLichSu()"></div></div><div class="search-field"><span class="search-icon">▣</span><div><label for="timLichSuNgay">Theo ngày</label><input id="timLichSuNgay" type="date" onchange="hienThiLichSu()"></div></div><button class="clear-search-btn" type="button" onclick="xoaBoLocLichSu()">Xóa bộ lọc</button></div><div id="danhSachLichSu" class="history-list"></div></section>
+<section id="lichSu" class="page management-page" style="display:none">
+  <div class="page-heading">
+    <div><h2>Lịch sử</h2><p>Tổng hợp và tra cứu toàn bộ các lần uống thuốc đã được ghi nhận.</p></div>
+  </div>
+  <section class="history-summary-card" aria-label="Tổng hợp uống thuốc hôm nay">
+    <div class="history-summary-head"><div><span class="section-kicker">TỔNG HỢP HÔM NAY</span><h3>Uống thuốc hôm nay</h3><p id="historySummaryDate"></p></div><div id="todayStats" class="today-stats"></div></div>
+    <div id="todaySummaryList" class="today-summary-list"></div>
+    <div id="complianceSummary" class="compliance-summary"></div>
+  </section>
+  <div class="history-section-heading"><div><h3>Tra cứu lịch sử</h3><p>Lọc theo tên hoặc ngày, sau đó mở từng ngày để xem chi tiết.</p></div></div>
+  <div class="history-search-card"><div class="search-field"><span class="search-icon">⌕</span><div><label for="timLichSuTen">Theo tên</label><input id="timLichSuTen" type="search" placeholder="Tên người sử dụng..." oninput="hienThiLichSu()"></div></div><div class="search-field"><span class="search-icon">▣</span><div><label for="timLichSuNgay">Theo ngày</label><input id="timLichSuNgay" type="date" onchange="hienThiLichSu()"></div></div><button class="clear-search-btn" type="button" onclick="xoaBoLocLichSu()">Xóa bộ lọc</button></div>
+  <div id="danhSachLichSu" class="history-day-list"></div>
+</section>
 <section id="xemLichSu" class="page detail-page" style="display:none"><div class="detail-topbar"><button class="back-btn" onclick="quayLaiLichSu()">← Lịch sử</button></div><h2>Xem lịch sử</h2><p class="detail-subtitle" id="tieuDeLichSu"></p><div class="detail-card history-view-card"><div class="readonly-badge">CHỈ XEM</div><div id="noiDungXemLichSu"></div></div></section>
 </main>
 

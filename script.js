@@ -943,23 +943,52 @@ function hienThiDuLieuNgan() {
 }
 
 function hienThiTongQuanHomNay() {
-    const box = document.getElementById("todaySchedule");
     const stats = document.getElementById("todayStats");
-    if (!box) return;
+    const summaryList = document.getElementById("todaySummaryList");
+    const compliance = document.getElementById("complianceSummary");
+    const summaryDate = document.getElementById("historySummaryDate");
+    if (!stats && !summaryList && !compliance) return;
+
     const homNay = ngayHomNay();
-    const ds = lichSu.filter(x => x.ngay === homNay).sort((a,b) => String(a.gio_uong||"").localeCompare(String(b.gio_uong||"")));
+    const ds = lichSu
+        .filter(x => x.ngay === homNay)
+        .sort((a, b) => String(a.gio_uong || "").localeCompare(String(b.gio_uong || "")));
+
     const daDung = ds.filter(x => x.trang_thai === "da_dung_thuoc").length;
     const chuaDung = ds.filter(x => x.trang_thai === "chua_dung_thuoc").length;
     const dangNhac = ds.filter(x => x.trang_thai === "dang_nhac").length;
-    if (stats) stats.innerHTML = `<span><b>${daDung}</b> đã dùng</span><span><b>${chuaDung}</b> chưa dùng</span><span><b>${dangNhac}</b> đang nhắc</span>`;
-    if (!ds.length) { box.innerHTML = '<div class="today-empty">Chưa có lịch uống thuốc hôm nay.</div>'; }
-    else box.innerHTML = ds.map(x => {
-        const n = x.ten_nguoi || layNguoi(x.nguoi_su_dung_id)?.ten || "Chưa có thông tin";
-        const st = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "Chờ đến giờ";
-        return `<button type="button" class="today-item" onclick="xemLichSu('${String(x.id).replace(/'/g,"\\'")}')"><span class="today-time">${escapeHTML(x.gio_uong || "--:--")}</span><span class="today-main"><strong>${escapeHTML(x.ten_thuoc || "Chưa có tên thuốc")}</strong><small>${escapeHTML(n)} • ${escapeHTML(tenNgan(Number(x.so_ngan)))}</small></span><span class="status-pill ${lopTrangThaiNhac(x.trang_thai)}">${escapeHTML(st)}</span></button>`;
-    }).join("");
-    const comp = document.getElementById("complianceSummary");
-    if (comp) {
+    const cho = ds.filter(x => !x.trang_thai || x.trang_thai === "cho_den_gio").length;
+
+    if (stats) {
+        stats.innerHTML = `
+            <span class="summary-stat done"><b>${daDung}</b> đã dùng</span>
+            <span class="summary-stat missed"><b>${chuaDung}</b> chưa dùng</span>
+            <span class="summary-stat active"><b>${dangNhac}</b> đang nhắc</span>
+            <span class="summary-stat waiting"><b>${cho}</b> chờ uống</span>`;
+    }
+
+    if (summaryDate) {
+        const d = new Date(`${homNay}T00:00:00`);
+        summaryDate.textContent = isNaN(d) ? homNay : d.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+
+    if (summaryList) {
+        if (!ds.length) {
+            summaryList.innerHTML = '<div class="today-empty">Hôm nay chưa có lịch uống thuốc.</div>';
+        } else {
+            summaryList.innerHTML = ds.map(x => {
+                const n = x.ten_nguoi || layNguoi(x.nguoi_su_dung_id)?.ten || "Chưa có thông tin";
+                const st = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "Chờ đến giờ";
+                return `<button type="button" class="today-summary-row" onclick="xemLichSu('${String(x.id).replace(/'/g,"\\'")}')">
+                    <span class="today-summary-time">${escapeHTML(x.gio_uong || "--:--")}</span>
+                    <span class="today-summary-main"><strong>${escapeHTML(x.ten_thuoc || "Chưa có tên thuốc")}</strong><small>${escapeHTML(n)} • ${escapeHTML(tenNgan(Number(x.so_ngan)))}</small></span>
+                    <span class="status-pill ${lopTrangThaiNhac(x.trang_thai)}">${escapeHTML(st)}</span>
+                </button>`;
+            }).join("");
+        }
+    }
+
+    if (compliance) {
         const now = new Date();
         const dates = [];
         for (let i = 0; i < 7; i++) {
@@ -969,7 +998,7 @@ function hienThiTongQuanHomNay() {
         const last7 = lichSu.filter(x => dates.includes(x.ngay));
         const completed = last7.filter(x => x.trang_thai === "da_dung_thuoc").length;
         const rate = last7.length ? Math.round(completed / last7.length * 100) : 0;
-        comp.innerHTML = `<div><strong>Tuân thủ 7 ngày gần đây</strong><small>${completed}/${last7.length || 0} lần đã dùng thuốc</small></div><b>${rate}%</b>`;
+        compliance.innerHTML = `<div><strong>Tuân thủ 7 ngày gần đây</strong><small>${completed}/${last7.length || 0} lần đã dùng thuốc</small></div><b>${rate}%</b>`;
     }
 }
 
@@ -982,18 +1011,16 @@ function moLichSu() {
 
 function hienThiLichSu() {
     const box = document.getElementById("danhSachLichSu");
+    if (!box) return;
     box.innerHTML = "";
+    hienThiTongQuanHomNay();
+
     const ten = (document.getElementById("timLichSuTen")?.value || "").trim().toLocaleLowerCase("vi");
     const ngay = document.getElementById("timLichSuNgay")?.value || "";
 
     const ketQua = lichSu.filter(x => {
-        const tenNguoi = String(x.ten_nguoi || "").toLocaleLowerCase("vi");
-        const moc = x.created_at || x.updated_at || "";
-        let ngayLichSu = String(moc).slice(0, 10);
-        const parsed = new Date(moc);
-        if (moc && !isNaN(parsed)) {
-            ngayLichSu = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(parsed);
-        }
+        const tenNguoi = String(x.ten_nguoi || layNguoi(x.nguoi_su_dung_id)?.ten || "").toLocaleLowerCase("vi");
+        const ngayLichSu = String(x.ngay || "").slice(0, 10);
         return (!ten || tenNguoi.includes(ten)) && (!ngay || ngayLichSu === ngay);
     });
 
@@ -1002,25 +1029,53 @@ function hienThiLichSu() {
         return;
     }
 
+    const nhomTheoNgay = {};
     ketQua.forEach(x => {
-        const d = document.createElement("button");
-        d.type = "button";
-        d.className = "history-item";
-        const lop = lopTrangThaiNhac(x.trang_thai);
-        const nhan = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "";
-        d.innerHTML = `
-            <div class="history-item-top">
-                <div><h3>MED 1 - ${escapeHTML(tenNgan(Number(x.so_ngan)))}</h3><span class="history-time">${escapeHTML(dinhDangNgayGio(x.created_at || x.updated_at))}</span></div>
-                <span class="history-arrow">›</span>
-            </div>
-            <p><strong>Người sử dụng:</strong> ${escapeHTML(x.ten_nguoi || "Chưa có thông tin")}</p>
-            <p><strong>Thuốc:</strong> ${escapeHTML(x.ten_thuoc || "Chưa có thông tin")}</p>
-            <p><strong>Giờ uống:</strong> ${escapeHTML(x.gio_uong || "Chưa có thông tin")}</p>
-            <span class="history-badge ${x.bat_nhac === false ? "off" : ""}">${x.bat_nhac === false ? "Nhắc nhở tắt" : "Nhắc nhở bật"}</span>
-            ${nhan ? ` <span class="status-pill ${lop}">${escapeHTML(nhan)}</span>` : ""}
-            <span class="history-hint">Bấm để xem chi tiết</span>`;
-        d.onclick = () => xemLichSu(x.id);
-        box.appendChild(d);
+        const key = String(x.ngay || (x.created_at || x.updated_at || "")).slice(0, 10) || "khong-xac-dinh";
+        if (!nhomTheoNgay[key]) nhomTheoNgay[key] = [];
+        nhomTheoNgay[key].push(x);
+    });
+
+    const ngayNhom = Object.keys(nhomTheoNgay).sort((a, b) => b.localeCompare(a));
+    const homNay = ngayHomNay();
+
+    ngayNhom.forEach((ngayKey, index) => {
+        const details = document.createElement("details");
+        details.className = "history-day-group";
+        details.open = ngayKey === homNay || (index === 0 && ngayNhom.length === 1);
+
+        const dateObj = new Date(`${ngayKey}T00:00:00`);
+        const label = ngayKey === homNay ? "Hôm nay" : (isNaN(dateObj) ? ngayKey : dateObj.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }));
+        const items = nhomTheoNgay[ngayKey].sort((a, b) => String(a.gio_uong || "").localeCompare(String(b.gio_uong || "")));
+        const daDung = items.filter(x => x.trang_thai === "da_dung_thuoc").length;
+        const chuaDung = items.filter(x => x.trang_thai === "chua_dung_thuoc").length;
+
+        const summary = document.createElement("summary");
+        summary.innerHTML = `<span class="history-day-title"><strong>${escapeHTML(label)}</strong><small>${items.length} lần uống</small></span><span class="history-day-meta"><em class="day-count done">${daDung} đã dùng</em>${chuaDung ? `<em class="day-count missed">${chuaDung} chưa dùng</em>` : ""}<span class="history-day-chevron">⌄</span></span>`;
+        details.appendChild(summary);
+
+        const list = document.createElement("div");
+        list.className = "history-day-items";
+        items.forEach(x => {
+            const d = document.createElement("button");
+            d.type = "button";
+            d.className = "history-item";
+            const lop = lopTrangThaiNhac(x.trang_thai);
+            const nhan = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "";
+            d.innerHTML = `
+                <div class="history-item-top">
+                    <div><h3>MED 1 - ${escapeHTML(tenNgan(Number(x.so_ngan)))}</h3><span class="history-time">${escapeHTML(x.gio_uong || "Chưa có giờ uống")} • ${escapeHTML(x.ten_nguoi || "Chưa có thông tin")}</span></div>
+                    <span class="history-arrow">›</span>
+                </div>
+                <p><strong>Thuốc:</strong> ${escapeHTML(x.ten_thuoc || "Chưa có thông tin")}</p>
+                <p><strong>Lời nhắn:</strong> ${escapeHTML(x.loi_nhan || "Chưa có thông tin")}</p>
+                <span class="status-pill ${lop}">${escapeHTML(nhan || "Chờ đến giờ")}</span>
+                <span class="history-hint">Bấm để xem chi tiết</span>`;
+            d.onclick = () => xemLichSu(x.id);
+            list.appendChild(d);
+        });
+        details.appendChild(list);
+        box.appendChild(details);
     });
 }
 
