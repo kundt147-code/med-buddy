@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MEDBUDDY</title>
+<title>MEDBUDDY — Vì sức khỏe người thân</title>
 <link rel="icon" type="image/svg+xml" href="medbuddy-logo.svg">
 <link rel="alternate icon" type="image/svg+xml" href="medbuddy-logo.svg">
 <link rel="apple-touch-icon" href="medbuddy-logo.svg">
@@ -62,6 +62,11 @@ html[data-med-view="xemLichSu"] #xemLichSu { display:block !important; }
 <section id="trangChinh" class="page">
   <div class="page-heading"><div><h2>MEDBUDDY-1</h2><p>Chọn ngăn thuốc cần cài đặt</p></div></div>
   <div class="qr-card"><div class="qr-text"><h3>Mã QR của tủ</h3><p>Quét mã để mở tủ MEDBUDDY-1</p><strong>MEDBUDDY-1</strong></div><div class="ma-qr"><img src="qr-medbuddy-1.png" alt="QR MEDBUDDY-1"></div></div>
+  <section class="today-overview" aria-label="Lịch uống thuốc hôm nay">
+    <div class="today-overview-head"><div><span class="section-kicker">THEO DÕI HÔM NAY</span><h3>Lịch uống thuốc</h3><p>Trạng thái được cập nhật từ các lần nhắc và mở ngăn.</p></div><div id="todayStats" class="today-stats"></div></div>
+    <div id="todaySchedule" class="today-schedule"><div class="today-empty">Chưa có lịch uống thuốc hôm nay.</div></div>
+    <div id="complianceSummary" class="compliance-summary"></div>
+  </section>
   <div id="tuThuoc" class="tu-thuoc">
     <div class="buoi-label sang"><span>☀</span><strong>Sáng</strong></div>
     <button class="ngan ngan-sang" onclick="moNgan(1)"><span>Sáng 1</span><small id="thongTin1">Chưa có thông tin</small><i>✦</i></button>
@@ -95,6 +100,8 @@ html[data-med-view="xemLichSu"] #xemLichSu { display:block !important; }
     <div class="form-card">
       <label for="nguoiSuDung">Người sử dụng</label><select id="nguoiSuDung"></select>
       <div id="hoSoNguoi" class="profile-preview"><p id="thongTinTuoi">Tuổi: Chưa có thông tin</p><p id="thongTinBenh">Tình trạng bệnh: Chưa có thông tin</p></div>
+      <label for="tenThuoc">Tên thuốc <small class="optional-label">(không bắt buộc)</small></label><input id="tenThuoc" placeholder="Ví dụ: Amlodipine 5mg"><small class="field-help">Có thể bỏ trống nếu chưa muốn khai báo tên thuốc.</small>
+      <div id="canhBaoDiUngNgan" class="allergy-warning" style="display:none"></div>
       <label for="gioUong">Giờ uống</label><div class="time-input-wrap"><span>◷</span><input type="time" id="gioUong"></div>
       <label for="loiNhan">Lời nhắn</label><textarea id="loiNhan" placeholder="Nhập lời nhắn"></textarea>
       <label for="lapLai">Lặp lại</label><select id="lapLai"><option value="khong_lap">Không lặp</option><option value="hang_ngay">Hằng ngày</option></select>
@@ -109,7 +116,7 @@ html[data-med-view="xemLichSu"] #xemLichSu { display:block !important; }
 
 <section id="quanLyNguoi" class="page management-page" style="display:none"><button class="back-btn" onclick="dongQuanLyNguoi()">← Quay lại</button><div class="page-heading"><div><h2>Thông tin người sử dụng</h2><p>Tra cứu và quản lý những người đang sử dụng tủ</p></div><button class="primary-btn" onclick="moThemNguoi()">+ Thêm người</button></div><div class="search-card person-search-card"><div class="search-label"><span class="search-icon">⌕</span><div><strong>Tra cứu người sử dụng</strong><small>Nhập tên để tìm nhanh hồ sơ</small></div></div><input id="timNguoi" type="search" placeholder="Tên người sử dụng..." oninput="hienThiDanhSachNguoiQuanLy()"></div><div id="danhSachNguoiQuanLy" class="people-list"></div></section>
 <section id="thongTinNguoiQuanLy" class="page management-page" style="display:none"><button class="back-btn" onclick="quayLaiDanhSachNguoi()">← Quay lại</button><h2>Thông tin người sử dụng</h2><div class="person-card"><div id="khuVucThongTinNguoi"></div><div id="nutXemNguoi" class="person-actions"><button class="primary-btn" onclick="moChinhSuaNguoi()">Chỉnh sửa</button><button class="danger-btn" onclick="xoaNguoi()">Xóa</button></div><div id="nutSuaNguoi" class="person-actions" style="display:none"><button class="primary-btn" onclick="luuChinhSuaNguoi()">Lưu</button><button class="secondary-btn" onclick="huyChinhSuaNguoi()">Hủy</button></div></div></section>
-<section id="themNguoi" class="page management-page" style="display:none"><button class="back-btn" onclick="dongThemNguoi()">← Quay lại</button><h2>Thêm người sử dụng</h2><div class="person-card form-card"><label>Tên người sử dụng</label><input id="tenNguoiMoi"><label>Ngày sinh</label><input id="ngaySinhNguoiMoi" type="date"><small class="date-help">Ngày sinh sẽ hiển thị theo dạng dd/mm/yyyy</small><label>Tình trạng bệnh</label><input id="benhNguoiMoi"><label>Các loại thuốc đang dùng</label><textarea id="thuocNguoiMoi"></textarea><label>Ghi chú</label><textarea id="ghiChuNguoiMoi"></textarea><div class="form-actions"><button class="primary-btn" onclick="themNguoi()">Thêm người</button><button class="secondary-btn" onclick="dongThemNguoi()">Hủy</button></div></div></section>
+<section id="themNguoi" class="page management-page" style="display:none"><button class="back-btn" onclick="dongThemNguoi()">← Quay lại</button><h2>Thêm người sử dụng</h2><div class="person-card form-card"><label>Tên người sử dụng</label><input id="tenNguoiMoi"><label>Ngày sinh</label><input id="ngaySinhNguoiMoi" type="date"><small class="date-help">Ngày sinh sẽ hiển thị theo dạng dd/mm/yyyy</small><label>Tình trạng bệnh</label><input id="benhNguoiMoi"><label>⚠ Dị ứng thuốc</label><textarea id="diUngNguoiMoi" class="allergy-input" placeholder="Nhập tên thuốc/chất đã biết dị ứng, cách nhau bằng dấu phẩy"></textarea><label>Các loại thuốc đang dùng</label><textarea id="thuocNguoiMoi"></textarea><label>Ghi chú</label><textarea id="ghiChuNguoiMoi"></textarea><div class="form-actions"><button class="primary-btn" onclick="themNguoi()">Thêm người</button><button class="secondary-btn" onclick="dongThemNguoi()">Hủy</button></div></div></section>
 <section id="lichSu" class="page management-page" style="display:none"><div class="page-heading"><div><h2>Lịch sử</h2><p>Bấm vào một dòng để xem lại đúng thông tin đã nhập lúc đó.</p></div></div><div class="history-search-card"><div class="search-field"><span class="search-icon">⌕</span><div><label for="timLichSuTen">Theo tên</label><input id="timLichSuTen" type="search" placeholder="Tên người sử dụng..." oninput="hienThiLichSu()"></div></div><div class="search-field"><span class="search-icon">▣</span><div><label for="timLichSuNgay">Theo ngày</label><input id="timLichSuNgay" type="date" onchange="hienThiLichSu()"></div></div><button class="clear-search-btn" type="button" onclick="xoaBoLocLichSu()">Xóa bộ lọc</button></div><div id="danhSachLichSu" class="history-list"></div></section>
 <section id="xemLichSu" class="page detail-page" style="display:none"><div class="detail-topbar"><button class="back-btn" onclick="quayLaiLichSu()">← Lịch sử</button></div><h2>Xem lịch sử</h2><p class="detail-subtitle" id="tieuDeLichSu"></p><div class="detail-card history-view-card"><div class="readonly-badge">CHỈ XEM</div><div id="noiDungXemLichSu"></div></div></section>
 </main>

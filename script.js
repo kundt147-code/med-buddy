@@ -46,6 +46,7 @@ function layFormHienTai() {
     if (!nguoi || !gio || !loi || !nhac) return null;
     return {
         nguoiSuDung: nguoi.value || "",
+        tenThuoc: document.getElementById("tenThuoc")?.value || "",
         gioUong: gio.value || "",
         loiNhan: loi.value || "",
         batNhac: !!nhac.checked,
@@ -96,6 +97,7 @@ async function khoiPhucTrangThai() {
             await moNgan(soNganHienTai);
             if (state.form) {
                 document.getElementById("nguoiSuDung").value = state.form.nguoiSuDung || "";
+                if (document.getElementById("tenThuoc")) document.getElementById("tenThuoc").value = state.form.tenThuoc || "";
                 document.getElementById("gioUong").value = state.form.gioUong || "";
                 document.getElementById("loiNhan").value = state.form.loiNhan || "";
                 document.getElementById("batNhac").checked = state.form.batNhac !== false;
@@ -249,6 +251,30 @@ function layNguoi(id) {
     return danhSachNguoi.find(x => String(x.id) === String(id));
 }
 
+function layDanhSachDiUng(n) {
+    return String(n?.di_ung || "").split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
+}
+
+function kiemTraCanhBaoDiUng(n, tenThuoc) {
+    const thuoc = String(tenThuoc || "").trim().toLocaleLowerCase("vi");
+    if (!thuoc) return [];
+    return layDanhSachDiUng(n).filter(item => {
+        const a = item.toLocaleLowerCase("vi");
+        return a && (thuoc.includes(a) || a.includes(thuoc));
+    });
+}
+
+function hienThiCanhBaoDiUngNgan() {
+    const box = document.getElementById("canhBaoDiUngNgan");
+    if (!box) return;
+    const n = layNguoi(document.getElementById("nguoiSuDung")?.value);
+    const tenThuoc = document.getElementById("tenThuoc")?.value || "";
+    const matches = kiemTraCanhBaoDiUng(n, tenThuoc);
+    if (!matches.length) { box.style.display = "none"; box.innerHTML = ""; return; }
+    box.style.display = "block";
+    box.innerHTML = `<strong>⚠ CẢNH BÁO DỊ ỨNG</strong><p>Thông tin thuốc đang nhập có cụm từ trùng với dị ứng đã khai báo: <b>${escapeHTML(matches.join(", "))}</b>.</p><small>Đây là cảnh báo dựa trên thông tin đã khai báo, không thay thế tư vấn của bác sĩ hoặc dược sĩ.</small>`;
+}
+
 function hienThiDanhSachNguoi() {
     const s = document.getElementById("nguoiSuDung");
     if (!s) return;
@@ -280,7 +306,7 @@ function hienThiHoSoTrongNgan(id) {
 }
 
 function datKhoaForm(khoa) {
-    ["nguoiSuDung", "gioUong", "loiNhan", "batNhac", "lapLai"].forEach(id => {
+    ["nguoiSuDung", "tenThuoc", "gioUong", "loiNhan", "batNhac", "lapLai"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.disabled = khoa;
     });
@@ -317,6 +343,7 @@ async function taiDuLieuTuDB() {
         duLieuNgan[x.so_ngan] = {
             id: x.id,
             nguoiSuDung: x.nguoi_su_dung_id,
+            tenThuoc: x.ten_thuoc || "",
             gioUong: x.gio_uong || "",
             loiNhan: x.loi_nhan || "",
             batNhac: x.bat_nhac !== false,
@@ -330,6 +357,7 @@ async function taiDuLieuTuDB() {
 
     hienThiDanhSachNguoi();
     hienThiDuLieuNgan();
+    hienThiTongQuanHomNay();
     if (document.getElementById("lichSu").style.display !== "none") hienThiLichSu();
     if (soNganHienTai !== null && document.getElementById("caiDat")?.style.display !== "none") hienThiTrangThaiNhacTrongNgan();
 }
@@ -375,11 +403,13 @@ async function moNgan(n) {
 
     const d = duLieuNgan[n];
     document.getElementById("nguoiSuDung").value = d?.nguoiSuDung ?? "";
+    document.getElementById("tenThuoc").value = d?.tenThuoc || "";
     document.getElementById("gioUong").value = d?.gioUong || "";
     document.getElementById("loiNhan").value = d?.loiNhan || "";
     document.getElementById("batNhac").checked = d?.batNhac !== false;
     document.getElementById("lapLai").value = d?.lapLai || "khong_lap";
     hienThiHoSoTrongNgan(d?.nguoiSuDung || "");
+    hienThiCanhBaoDiUngNgan();
     capNhatNutNgap();
     hienThiTrangThaiNhacTrongNgan();
     luuTrangThai("caiDat");
@@ -400,6 +430,7 @@ function quayLaiTu() {
 function layForm() {
     return {
         nguoiSuDung: document.getElementById("nguoiSuDung").value || null,
+        tenThuoc: document.getElementById("tenThuoc")?.value.trim() || "",
         gioUong: document.getElementById("gioUong").value,
         loiNhan: document.getElementById("loiNhan").value.trim(),
         batNhac: document.getElementById("batNhac").checked,
@@ -408,8 +439,10 @@ function layForm() {
 }
 
 function kiemTra(d) {
+    // Tên thuốc là thông tin bổ sung, KHÔNG bắt buộc.
+    // Có/không có tên thuốc đều không được chặn việc lưu ngăn, tạo lịch hoặc nhắc thuốc.
     if (!d.nguoiSuDung || !d.gioUong || !d.loiNhan) {
-        hienThiModal("Thiếu thông tin", "Vui lòng nhập đầy đủ người sử dụng, giờ uống và lời nhắn cho ngăn này.", "error");
+        hienThiModal("Thiếu thông tin", "Vui lòng nhập người sử dụng, giờ uống và lời nhắn cho ngăn này. Tên thuốc là thông tin tùy chọn.", "error");
         return false;
     }
     return true;
@@ -454,7 +487,7 @@ async function luuMoi() {
         let slot;
         if (oldSlot) {
             const r = await db.from("ngan_thuoc")
-                .update({ nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai, updated_at: new Date().toISOString() })
+                .update({ nguoi_su_dung_id: d.nguoiSuDung, ten_thuoc: d.tenThuoc, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai, updated_at: new Date().toISOString() })
                 .eq("id", oldSlot.id)
                 .select()
                 .single();
@@ -462,7 +495,7 @@ async function luuMoi() {
             slot = r.data;
         } else {
             const r = await db.from("ngan_thuoc")
-                .insert({ ma_tu: maTu, so_ngan: soNganHienTai, nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai })
+                .insert({ ma_tu: maTu, so_ngan: soNganHienTai, nguoi_su_dung_id: d.nguoiSuDung, ten_thuoc: d.tenThuoc, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai })
                 .select()
                 .single();
             if (r.error) throw r.error;
@@ -476,6 +509,7 @@ async function luuMoi() {
             so_ngan: soNganHienTai,
             nguoi_su_dung_id: d.nguoiSuDung,
             ten_nguoi: n?.ten || "Chưa có thông tin",
+            ten_thuoc: d.tenThuoc,
             gio_uong: d.gioUong,
             loi_nhan: d.loiNhan,
             bat_nhac: d.batNhac,
@@ -530,11 +564,13 @@ function huyChinhSuaNgan() {
     const d = duLieuNgan[soNganHienTai];
     if (d) {
         document.getElementById("nguoiSuDung").value = d.nguoiSuDung ?? "";
+        document.getElementById("tenThuoc").value = d.tenThuoc || "";
         document.getElementById("gioUong").value = d.gioUong || "";
         document.getElementById("loiNhan").value = d.loiNhan || "";
         document.getElementById("batNhac").checked = d.batNhac !== false;
         document.getElementById("lapLai").value = d.lapLai || "khong_lap";
         hienThiHoSoTrongNgan(d.nguoiSuDung);
+        hienThiCanhBaoDiUngNgan();
     }
     dangChinhSuaNgan = false;
     capNhatNutNgap();
@@ -551,7 +587,7 @@ async function luuChinhSuaNgan() {
 
     try {
         const r = await db.from("ngan_thuoc")
-            .update({ nguoi_su_dung_id: d.nguoiSuDung, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai, updated_at: new Date().toISOString() })
+            .update({ nguoi_su_dung_id: d.nguoiSuDung, ten_thuoc: d.tenThuoc, gio_uong: d.gioUong, loi_nhan: d.loiNhan, bat_nhac: d.batNhac, lap_lai: d.lapLai, updated_at: new Date().toISOString() })
             .eq("id", old.id)
             .select()
             .single();
@@ -575,6 +611,7 @@ async function luuChinhSuaNgan() {
             const hr = await db.from("lich_su").update({
                 nguoi_su_dung_id: d.nguoiSuDung,
                 ten_nguoi: n?.ten || "Chưa có thông tin",
+                ten_thuoc: d.tenThuoc,
                 gio_uong: d.gioUong,
                 loi_nhan: d.loiNhan,
                 bat_nhac: d.batNhac,
@@ -585,7 +622,7 @@ async function luuChinhSuaNgan() {
         } else if (!banGhi) {
             const payload = {
                 ma_tu: maTu, so_ngan: soNganHienTai, nguoi_su_dung_id: d.nguoiSuDung,
-                ten_nguoi: n?.ten || "Chưa có thông tin", gio_uong: d.gioUong,
+                ten_nguoi: n?.ten || "Chưa có thông tin", ten_thuoc: d.tenThuoc, gio_uong: d.gioUong,
                 loi_nhan: d.loiNhan, bat_nhac: d.batNhac, ngay: homNay,
                 lap_lai: d.lapLai, trang_thai: "cho_den_gio", so_lan_nhac: 0
             };
@@ -641,7 +678,8 @@ async function xoaThongTinNgan() {
 /* =========================
    NGƯỜI SỬ DỤNG
 ========================= */
-document.getElementById("nguoiSuDung").addEventListener("change", e => hienThiHoSoTrongNgan(e.target.value));
+document.getElementById("nguoiSuDung").addEventListener("change", e => { hienThiHoSoTrongNgan(e.target.value); hienThiCanhBaoDiUngNgan(); });
+document.getElementById("tenThuoc")?.addEventListener("input", hienThiCanhBaoDiUngNgan);
 
 function moNguoiTuNgan() {
     if (nguoiTuNgan) moThongTinNguoiQuanLy(nguoiTuNgan, "caiDat");
@@ -706,6 +744,7 @@ function hienThiThongTinNguoi(n) {
             <div><p class="muted">Người sử dụng</p><h3>${escapeHTML(n.ten)}</h3><span class="role-tag">Hồ sơ người thân</span></div>
         </div>
         <div class="info-grid">
+            <div class="allergy-profile ${layDanhSachDiUng(n).length ? "has-allergy" : "no-allergy"}"><div><span class="allergy-mark">⚠</span><strong>${layDanhSachDiUng(n).length ? "CẢNH BÁO DỊ ỨNG" : "Dị ứng thuốc"}</strong></div><p>${escapeHTML(layDanhSachDiUng(n).length ? layDanhSachDiUng(n).join(", ") : "Chưa có thông tin dị ứng đã khai báo")}</p></div>
             <div class="info-item"><strong>Ngày sinh</strong><p>${dinhDangNgaySinh(n.ngay_sinh)}</p></div>
             <div class="info-item"><strong>Tuổi</strong><p>${n.ngay_sinh ? tinhTuoi(n.ngay_sinh) : "Chưa có thông tin"}</p></div>
             <div class="info-item"><strong>Tình trạng bệnh</strong><p>${escapeHTML(n.tinh_trang_benh || "Chưa có thông tin")}</p></div>
@@ -727,7 +766,7 @@ function quayLaiDanhSachNguoi() {
 function moThemNguoi() {
     anTatCaTrang();
     document.getElementById("themNguoi").style.display = "block";
-    ["tenNguoiMoi", "ngaySinhNguoiMoi", "benhNguoiMoi", "thuocNguoiMoi", "ghiChuNguoiMoi"].forEach(id => document.getElementById(id).value = "");
+    ["tenNguoiMoi", "ngaySinhNguoiMoi", "benhNguoiMoi", "diUngNguoiMoi", "thuocNguoiMoi", "ghiChuNguoiMoi"].forEach(id => document.getElementById(id).value = "");
     luuTrangThai("themNguoi");
 }
 
@@ -748,6 +787,7 @@ async function themNguoi() {
             ten,
             ngay_sinh: ngay,
             tinh_trang_benh: document.getElementById("benhNguoiMoi").value.trim(),
+            di_ung: document.getElementById("diUngNguoiMoi")?.value.trim() || "",
             thuoc_dang_dung: document.getElementById("thuocNguoiMoi").value.trim(),
             ghi_chu: document.getElementById("ghiChuNguoiMoi").value.trim()
         });
@@ -770,6 +810,7 @@ function moChinhSuaNguoi() {
             <label>Ngày sinh</label><input class="edit-input" type="date" id="suaNgaySinhNguoi" value="${n.ngay_sinh || ""}">
             <small class="date-help">Ngày sinh sẽ hiển thị theo dạng dd/mm/yyyy</small>
             <label>Tình trạng bệnh</label><input class="edit-input" id="suaBenhNguoi" value="${escapeHTML(n.tinh_trang_benh || "")}">
+            <label>⚠ Dị ứng thuốc</label><textarea class="edit-textarea allergy-input" id="suaDiUngNguoi" placeholder="Tên thuốc/chất, cách nhau bằng dấu phẩy">${escapeHTML(n.di_ung || "")}</textarea>
             <label>Các loại thuốc đang dùng</label><textarea class="edit-textarea" id="suaThuocNguoi">${escapeHTML(n.thuoc_dang_dung || "")}</textarea>
             <label>Ghi chú</label><textarea class="edit-textarea" id="suaGhiChuNguoi">${escapeHTML(n.ghi_chu || "")}</textarea>
         </div>`;
@@ -800,6 +841,7 @@ function luuChinhSuaNguoi() {
                 ten,
                 ngay_sinh: ngay,
                 tinh_trang_benh: document.getElementById("suaBenhNguoi").value.trim(),
+                di_ung: document.getElementById("suaDiUngNguoi")?.value.trim() || "",
                 thuoc_dang_dung: document.getElementById("suaThuocNguoi").value.trim(),
                 ghi_chu: document.getElementById("suaGhiChuNguoi").value.trim()
             }).eq("id", n.id).eq("ma_tu", maTu);
@@ -855,8 +897,40 @@ function hienThiDuLieuNgan() {
                 else if (rec.trang_thai === "chua_dung_thuoc") dong3 = "⚠ Chưa dùng thuốc";
                 else if (rec.trang_thai === "da_dung_thuoc") dong3 = "✓ Đã dùng thuốc";
             }
-            o.innerHTML = `${escapeHTML(n.ten)}<br><b>◷ ${escapeHTML(d.gioUong || "")}</b><br><span>${dong3}</span>`;
+            const allergy = kiemTraCanhBaoDiUng(n, d.tenThuoc);
+            o.innerHTML = `${escapeHTML(n.ten)}<br><b>💊 ${escapeHTML(d.tenThuoc || "Chưa có tên thuốc")}</b><br><b>◷ ${escapeHTML(d.gioUong || "")}</b><br><span>${dong3}</span>${allergy.length ? `<br><em class="mini-allergy">⚠ Dị ứng đã khai báo</em>` : ""}`;
         }
+    }
+}
+
+function hienThiTongQuanHomNay() {
+    const box = document.getElementById("todaySchedule");
+    const stats = document.getElementById("todayStats");
+    if (!box) return;
+    const homNay = ngayHomNay();
+    const ds = lichSu.filter(x => x.ngay === homNay).sort((a,b) => String(a.gio_uong||"").localeCompare(String(b.gio_uong||"")));
+    const daDung = ds.filter(x => x.trang_thai === "da_dung_thuoc").length;
+    const chuaDung = ds.filter(x => x.trang_thai === "chua_dung_thuoc").length;
+    const dangNhac = ds.filter(x => x.trang_thai === "dang_nhac").length;
+    if (stats) stats.innerHTML = `<span><b>${daDung}</b> đã dùng</span><span><b>${chuaDung}</b> chưa dùng</span><span><b>${dangNhac}</b> đang nhắc</span>`;
+    if (!ds.length) { box.innerHTML = '<div class="today-empty">Chưa có lịch uống thuốc hôm nay.</div>'; }
+    else box.innerHTML = ds.map(x => {
+        const n = x.ten_nguoi || layNguoi(x.nguoi_su_dung_id)?.ten || "Chưa có thông tin";
+        const st = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "Chờ đến giờ";
+        return `<button type="button" class="today-item" onclick="xemLichSu('${String(x.id).replace(/'/g,"\\'")}')"><span class="today-time">${escapeHTML(x.gio_uong || "--:--")}</span><span class="today-main"><strong>${escapeHTML(x.ten_thuoc || "Chưa có tên thuốc")}</strong><small>${escapeHTML(n)} • ${escapeHTML(tenNgan(Number(x.so_ngan)))}</small></span><span class="status-pill ${lopTrangThaiNhac(x.trang_thai)}">${escapeHTML(st)}</span></button>`;
+    }).join("");
+    const comp = document.getElementById("complianceSummary");
+    if (comp) {
+        const now = new Date();
+        const dates = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(now.getTime() - i * 86400000);
+            dates.push(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(d));
+        }
+        const last7 = lichSu.filter(x => dates.includes(x.ngay));
+        const completed = last7.filter(x => x.trang_thai === "da_dung_thuoc").length;
+        const rate = last7.length ? Math.round(completed / last7.length * 100) : 0;
+        comp.innerHTML = `<div><strong>Tuân thủ 7 ngày gần đây</strong><small>${completed}/${last7.length || 0} lần đã dùng thuốc</small></div><b>${rate}%</b>`;
     }
 }
 
@@ -901,6 +975,7 @@ function hienThiLichSu() {
                 <span class="history-arrow">›</span>
             </div>
             <p><strong>Người sử dụng:</strong> ${escapeHTML(x.ten_nguoi || "Chưa có thông tin")}</p>
+            <p><strong>Thuốc:</strong> ${escapeHTML(x.ten_thuoc || "Chưa có thông tin")}</p>
             <p><strong>Giờ uống:</strong> ${escapeHTML(x.gio_uong || "Chưa có thông tin")}</p>
             <span class="history-badge ${x.bat_nhac === false ? "off" : ""}">${x.bat_nhac === false ? "Nhắc nhở tắt" : "Nhắc nhở bật"}</span>
             ${nhan ? ` <span class="status-pill ${lop}">${escapeHTML(nhan)}</span>` : ""}
@@ -934,6 +1009,7 @@ function xemLichSu(id) {
         <div class="history-view-grid">
             <div class="view-field"><strong>Người sử dụng</strong><button id="historyPersonButton" type="button" class="history-person-link">${escapeHTML(n?.ten || x.ten_nguoi || "Chưa có thông tin")} <span>→ Xem hồ sơ</span></button></div>
             <div class="view-field"><strong>Ngày nhập lịch sử</strong>${escapeHTML(dinhDangNgayGio(x.created_at || x.updated_at))}</div>
+            <div class="view-field"><strong>Tên thuốc</strong>${escapeHTML(x.ten_thuoc || "Chưa có thông tin")}</div>
             <div class="view-field"><strong>Giờ uống</strong>${escapeHTML(x.gio_uong || "Chưa có thông tin")}</div>
             <div class="view-field"><strong>Lời nhắn</strong>${escapeHTML(x.loi_nhan || "Chưa có thông tin")}</div>
             <div class="view-field"><strong>Nhắc nhở</strong>${x.bat_nhac === false ? "Đang tắt" : "Đang bật"}</div>
@@ -1057,6 +1133,7 @@ function dungPhatLoiNhac(recordId) {
 
 function capNhatHienThiSauLichNhac() {
     hienThiDuLieuNgan();
+    hienThiTongQuanHomNay();
     if (document.getElementById("lichSu")?.style.display !== "none") hienThiLichSu();
     if (soNganHienTai !== null && document.getElementById("caiDat")?.style.display !== "none") hienThiTrangThaiNhacTrongNgan();
 }
@@ -1155,7 +1232,7 @@ async function kiemTraLichNhac() {
                 const tenNguoi = rec.ten_nguoi || layNguoi(rec.nguoi_su_dung_id)?.ten || "Người sử dụng";
                 const tenNgan = tenNgan(Number(rec.so_ngan));
                 const noiDung = rec.loi_nhan || "Đã đến giờ uống thuốc";
-                const noiDungDoc = `${tenNguoi}. ${noiDung}. Tại ngăn ${tenNgan}.`;
+                const noiDungDoc = `${tenNguoi}. ${rec.ten_thuoc ? "Đã đến giờ uống " + rec.ten_thuoc + ". " : ""}${noiDung}. Tại ngăn ${tenNgan}.`;
                 phatLoiNhac(rec.id, noiDungDoc, giaiDoan.ketThucPhat);
             } else {
                 dungPhatLoiNhac(rec.id);
@@ -1227,7 +1304,7 @@ function moNganDemo() {
 }
 
 function ganSuKienLuuTrangThai() {
-    ["nguoiSuDung", "gioUong", "loiNhan", "batNhac", "lapLai"].forEach(id => {
+    ["nguoiSuDung", "tenThuoc", "gioUong", "loiNhan", "batNhac", "lapLai"].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener("input", () => {
