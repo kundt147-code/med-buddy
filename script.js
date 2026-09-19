@@ -994,15 +994,14 @@ function phatLoiNhac(recordId, text, ketThuc) {
     if (hien && hien.dangChay) return;
     if (!window.speechSynthesis) return;
 
-    const state = { dangChay: true, ketThuc, timer: null, lapTimer: null };
+    const state = { dangChay: true, ketThuc, timer: null, lapTimer: null, token: Symbol("nhac") };
     dangPhatLoaTheo[recordId] = state;
 
-    // Mỗi lần đọc là một SpeechSynthesisUtterance riêng. Chrome đôi khi
-    // không gọi onend ổn định, vì vậy không phụ thuộc vào onend để lặp.
-    // Cứ vài giây kiểm tra một lần và phát lại cho tới đúng mốc 1 phút.
+    // Mốc 1 phút được tính từ ketThuc do giai đoạn nhắc xác định, không cộng
+    // thêm 5 giây kiểm tra. Timer 5 giây chỉ là cơ chế kiểm tra để phát lại.
     const noiMotLan = () => {
         const hienTai = dangPhatLoaTheo[recordId];
-        if (!hienTai || !hienTai.dangChay) return;
+        if (!hienTai || !hienTai.dangChay || hienTai.token !== state.token) return;
         if (Date.now() >= hienTai.ketThuc) {
             dungPhatLoiNhac(recordId);
             return;
@@ -1013,29 +1012,47 @@ function phatLoiNhac(recordId, text, ketThuc) {
             u.lang = "vi-VN";
             u.rate = 0.95;
             u.pitch = 1;
+            u.onstart = () => {
+                // Nếu cửa ngăn vừa được mở trong lúc utterance chuẩn bị chạy,
+                // phiên nhắc đã bị vô hiệu hóa thì hủy ngay.
+                const cur = dangPhatLoaTheo[recordId];
+                if (!cur || !cur.dangChay || cur.token !== state.token) {
+                    try { window.speechSynthesis.cancel(); } catch (e) {}
+                }
+            };
             window.speechSynthesis.speak(u);
         } catch (e) {
-            // Không dừng toàn bộ chu kỳ chỉ vì một lượt đọc lỗi.
             console.warn("MEDBUDDY: không thể phát một lượt nhắc:", e);
         }
     };
 
     noiMotLan();
-    // Khoảng 5 giây/lượt: sau khi một câu đọc xong sẽ tự đọc lại,
-    // nhưng vẫn dừng tuyệt đối khi hết 1 phút.
     state.lapTimer = setInterval(noiMotLan, 5000);
     state.timer = setTimeout(() => dungPhatLoiNhac(recordId), Math.max(0, ketThuc - Date.now()));
 }
 
 function dungPhatLoiNhac(recordId) {
     const hien = dangPhatLoaTheo[recordId];
-    if (hien) {
-        hien.dangChay = false;
-        if (hien.timer) clearTimeout(hien.timer);
-        if (hien.lapTimer) clearInterval(hien.lapTimer);
-        delete dangPhatLoaTheo[recordId];
-        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
-    }
+    if (!hien) return;
+
+    // Vô hiệu hóa phiên trước khi cancel để callback/timer cũ không thể
+    // phát lại sau khi người dùng mở ngăn.
+    hien.dangChay = false;
+    hien.token = null;
+    if (hien.timer) clearTimeout(hien.timer);
+    if (hien.lapTimer) clearInterval(hien.lapTimer);
+    delete dangPhatLoaTheo[recordId];
+
+    try {
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            // Một số trình duyệt giữ trạng thái speaking/pending thêm một nhịp;
+            // gọi cancel lần nữa ở tick kế tiếp để bảo đảm im ngay khi mở ngăn.
+            setTimeout(() => {
+                try { window.speechSynthesis.cancel(); } catch (e) {}
+            }, 0);
+        }
+    } catch (e) {}
 }
 
 function capNhatHienThiSauLichNhac() {
@@ -1135,7 +1152,11 @@ async function kiemTraLichNhac() {
 
             const batNhacNgan = rec.bat_nhac !== false;
             if (giaiDoan.dangPhat && batNhacNgan) {
-                phatLoiNhac(rec.id, rec.loi_nhan, giaiDoan.ketThucPhat);
+                const tenNguoi = rec.ten_nguoi || layNguoi(rec.nguoi_su_dung_id)?.ten || "Người sử dụng";
+                const tenNgan = tenNgan(Number(rec.so_ngan));
+                const noiDung = rec.loi_nhan || "Đã đến giờ uống thuốc";
+                const noiDungDoc = `${tenNguoi}. ${noiDung}. Tại ngăn ${tenNgan}.`;
+                phatLoiNhac(rec.id, noiDungDoc, giaiDoan.ketThucPhat);
             } else {
                 dungPhatLoiNhac(rec.id);
             }
