@@ -17,6 +17,97 @@ let trangTruocThongTin = "quanLyNguoi";
 let nguoiTuNgan = null;
 let lichSuDangXem = null;
 
+const TRANG_THAI_KEY = `medbuddy_trang_thai_${maTu}`;
+let dangKhoiPhucTrang = false;
+
+function layFormHienTai() {
+    const nguoi = document.getElementById("nguoiSuDung");
+    const gio = document.getElementById("gioUong");
+    const loi = document.getElementById("loiNhan");
+    const nhac = document.getElementById("batNhac");
+    if (!nguoi || !gio || !loi || !nhac) return null;
+    return {
+        nguoiSuDung: nguoi.value || "",
+        gioUong: gio.value || "",
+        loiNhan: loi.value || "",
+        batNhac: !!nhac.checked
+    };
+}
+
+function luuTrangThai(view) {
+    try {
+        const state = {
+            view,
+            soNgan: soNganHienTai,
+            nguoiDangXem,
+            trangTruocQuanLy,
+            trangTruocThongTin,
+            lichSuDangXem,
+            mode: dangChinhSuaNgan ? "edit" : dangNhap ? "input" : "view",
+            form: view === "caiDat" ? layFormHienTai() : null
+        };
+        sessionStorage.setItem(TRANG_THAI_KEY, JSON.stringify(state));
+    } catch (e) {
+        console.warn("Không thể lưu trạng thái giao diện:", e);
+    }
+}
+
+function xoaTrangThai() {
+    try { sessionStorage.removeItem(TRANG_THAI_KEY); } catch (e) {}
+}
+
+async function khoiPhucTrangThai() {
+    let state = null;
+    try { state = JSON.parse(sessionStorage.getItem(TRANG_THAI_KEY) || "null"); } catch (e) {}
+    if (!state || !state.view || state.view === "trangChinh") {
+        veTrangChinh();
+        return;
+    }
+
+    dangKhoiPhucTrang = true;
+    soNganHienTai = state.soNgan ?? null;
+    nguoiDangXem = state.nguoiDangXem ?? null;
+    trangTruocQuanLy = state.trangTruocQuanLy || "trangChinh";
+    trangTruocThongTin = state.trangTruocThongTin || "quanLyNguoi";
+    lichSuDangXem = state.lichSuDangXem ?? null;
+
+    try {
+        if (state.view === "caiDat" && soNganHienTai !== null) {
+            await moNgan(soNganHienTai);
+            if (state.form) {
+                document.getElementById("nguoiSuDung").value = state.form.nguoiSuDung || "";
+                document.getElementById("gioUong").value = state.form.gioUong || "";
+                document.getElementById("loiNhan").value = state.form.loiNhan || "";
+                document.getElementById("batNhac").checked = state.form.batNhac !== false;
+                hienThiHoSoTrongNgan(state.form.nguoiSuDung || "");
+            }
+            if (state.mode === "input") {
+                dangNhap = true;
+                dangChinhSuaNgan = false;
+                capNhatNutNgap();
+            } else if (state.mode === "edit") {
+                dangNhap = false;
+                dangChinhSuaNgan = true;
+                capNhatNutNgap();
+            }
+        } else if (state.view === "quanLyNguoi") {
+            moQuanLyNguoi();
+        } else if (state.view === "thongTinNguoiQuanLy" && nguoiDangXem) {
+            moThongTinNguoiQuanLy(nguoiDangXem, trangTruocThongTin);
+        } else if (state.view === "themNguoi") {
+            moThemNguoi();
+        } else if (state.view === "lichSu") {
+            moLichSu();
+        } else if (state.view === "xemLichSu" && lichSuDangXem) {
+            xemLichSu(lichSuDangXem);
+        } else {
+            veTrangChinh();
+        }
+    } finally {
+        dangKhoiPhucTrang = false;
+    }
+}
+
 function escapeHTML(t) {
     return String(t ?? "")
         .replace(/&/g, "&amp;")
@@ -94,6 +185,7 @@ function veTrangChinh() {
     anTatCaTrang();
     document.getElementById("trangChinh").style.display = "block";
     hienThiDuLieuNgan();
+    xoaTrangThai();
 }
 
 function tinhTuoi(iso) {
@@ -178,7 +270,11 @@ function capNhatNutNgap() {
     document.getElementById("nutLuaChonNhap").style.display = (dangNhap && !dangChinhSuaNgan) ? "flex" : "none";
     document.getElementById("nutCaiDatDangSua").style.display = dangChinhSuaNgan ? "flex" : "none";
     const nutXoa = document.getElementById("nutXoaNgan");
-    if (nutXoa) nutXoa.style.display = dangXem && !!duLieuNgan[soNganHienTai] ? "inline-flex" : "none";
+    if (nutXoa) {
+        nutXoa.style.display = dangXem ? "inline-flex" : "none";
+        nutXoa.disabled = !duLieuNgan[soNganHienTai];
+        nutXoa.title = duLieuNgan[soNganHienTai] ? "Xóa thông tin hiện tại của ngăn" : "Ngăn chưa có thông tin";
+    }
     datKhoaForm(dangXem);
     document.getElementById("trangThaiNgan").textContent = dangChinhSuaNgan ? "Đang chỉnh sửa" : dangNhap ? "Đang nhập thông tin" : "Chế độ xem";
     document.getElementById("moTaTrangThai").textContent = dangChinhSuaNgan ? "Bạn đang chỉnh sửa thông tin của ngăn" : dangNhap ? "Chọn Lưu mới hoặc Chỉnh sửa" : "Thông tin hiện tại của ngăn";
@@ -260,6 +356,7 @@ async function moNgan(n) {
     document.getElementById("batNhac").checked = d?.batNhac !== false;
     hienThiHoSoTrongNgan(d?.nguoiSuDung || "");
     capNhatNutNgap();
+    luuTrangThai("caiDat");
 }
 
 function quayLaiTu() {
@@ -295,10 +392,11 @@ function batDauNhap() {
     dangNhap = true;
     dangChinhSuaNgan = false;
     capNhatNutNgap();
+    luuTrangThai("caiDat");
 }
 
 function huyTrongCheDoXem() {
-    // Ở chế độ xem, Hủy chỉ có nhiệm vụ quay về màn hình chọn ngăn.
+    // Ở chế độ xem, Hủy quay về màn hình chọn ngăn.
     dangNhap = false;
     dangChinhSuaNgan = false;
     veTrangChinh();
@@ -375,6 +473,7 @@ function batDauChinhSuaNgan() {
     dangNhap = false;
     dangChinhSuaNgan = true;
     capNhatNutNgap();
+    luuTrangThai("caiDat");
 }
 
 function huyChinhSuaNgan() {
@@ -487,6 +586,7 @@ function moQuanLyNguoi() {
     anTatCaTrang();
     document.getElementById("quanLyNguoi").style.display = "block";
     hienThiDanhSachNguoiQuanLy();
+    luuTrangThai("quanLyNguoi");
 }
 
 function dongQuanLyNguoi() {
@@ -530,6 +630,7 @@ function moThongTinNguoiQuanLy(id, from = "quanLyNguoi") {
     hienThiThongTinNguoi(n);
     document.getElementById("nutXemNguoi").style.display = "flex";
     document.getElementById("nutSuaNguoi").style.display = "none";
+    luuTrangThai("thongTinNguoiQuanLy");
 }
 
 function hienThiThongTinNguoi(n) {
@@ -561,6 +662,7 @@ function moThemNguoi() {
     anTatCaTrang();
     document.getElementById("themNguoi").style.display = "block";
     ["tenNguoiMoi", "ngaySinhNguoiMoi", "benhNguoiMoi", "thuocNguoiMoi", "ghiChuNguoiMoi"].forEach(id => document.getElementById(id).value = "");
+    luuTrangThai("themNguoi");
 }
 
 function dongThemNguoi() {
@@ -607,6 +709,7 @@ function moChinhSuaNguoi() {
         </div>`;
     document.getElementById("nutXemNguoi").style.display = "none";
     document.getElementById("nutSuaNguoi").style.display = "flex";
+    luuTrangThai("thongTinNguoiQuanLy");
 }
 
 function huyChinhSuaNguoi() {
@@ -687,6 +790,7 @@ function moLichSu() {
     anTatCaTrang();
     document.getElementById("lichSu").style.display = "block";
     hienThiLichSu();
+    luuTrangThai("lichSu");
 }
 
 function hienThiLichSu() {
@@ -760,10 +864,25 @@ function xemLichSu(id) {
     const personButton = document.getElementById("historyPersonButton");
     if (n) personButton.onclick = () => moThongTinNguoiQuanLy(n.id, "lichSu");
     else personButton.disabled = true;
+    luuTrangThai("xemLichSu");
 }
 
 function quayLaiLichSu() {
     moLichSu();
+}
+
+
+function ganSuKienLuuTrangThai() {
+    ["nguoiSuDung", "gioUong", "loiNhan", "batNhac"].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("input", () => {
+            if (document.getElementById("caiDat").style.display !== "none") luuTrangThai("caiDat");
+        });
+        el.addEventListener("change", () => {
+            if (document.getElementById("caiDat").style.display !== "none") luuTrangThai("caiDat");
+        });
+    });
 }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -771,5 +890,9 @@ window.addEventListener("DOMContentLoaded", () => {
     if (q) q.textContent = maTu;
     const menuTu = document.getElementById("menuTuSelector");
     if (menuTu) menuTu.value = maTu;
-    khoiTaoDuLieu();
+    ganSuKienLuuTrangThai();
+    (async () => {
+        await khoiTaoDuLieu();
+        await khoiPhucTrangThai();
+    })();
 });
