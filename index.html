@@ -5,7 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MEDBUDDY</title>
 <link rel="stylesheet" href="style.css">
-<style>body.app-loading main{visibility:hidden}body.app-ready main{visibility:visible}</style>
+<style>
+/* Khôi phục giao diện ngay khi HTML sẵn sàng, không chớp về Trang chủ khi F5. */
+body.app-loading main{visibility:hidden}
+body.app-ready main{visibility:visible}
+body.pre-restored main{visibility:visible}
+body.pre-restored .page{display:none}
+body.pre-restored #trangChinh{display:block}
+body.pre-restored #caiDat,
+body.pre-restored #quanLyNguoi,
+body.pre-restored #thongTinNguoiQuanLy,
+body.pre-restored #themNguoi,
+body.pre-restored #lichSu,
+body.pre-restored #xemLichSu{display:none}
+</style>
+<script>
+/* Bootstrap độc lập với Supabase: F5 sẽ hiện đúng trang đã lưu ngay khi DOM tải xong. */
+(function(){
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var maTu = params.get('tu') || 'MEDBUDDY-1';
+    var raw = localStorage.getItem('medbuddy_trang_thai_' + maTu);
+    var state = raw ? JSON.parse(raw) : null;
+    if (state && state.view) {
+      document.addEventListener('DOMContentLoaded', function(){
+        var ids = ['trangChinh','caiDat','quanLyNguoi','thongTinNguoiQuanLy','themNguoi','lichSu','xemLichSu'];
+        ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
+        var target = document.getElementById(state.view);
+        if(target) target.style.display = 'block';
+        document.body.classList.add('pre-restored');
+        document.body.classList.remove('app-loading');
+      }, {once:true});
+    }
+  } catch(e) {}
+})();
+</script>
 </head>
 <body class="app-loading">
 <header class="top-header">

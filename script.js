@@ -1,7 +1,9 @@
 /* MEDBUDDY - V6: Supabase sync + custom modal + history viewer */
 const SUPABASE_URL = "https://zkbqjmpwxaukfytnnjjl.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_442VMaVK-Dvy92tJ0Ky_Fw_FT5Rbbg3";
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const db = (window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+    : null;
 
 const thamSo = new URLSearchParams(window.location.search);
 const maTu = thamSo.get("tu") || "MEDBUDDY-1";
@@ -934,7 +936,9 @@ window.addEventListener("DOMContentLoaded", () => {
     ganSuKienLuuTrangThai();
     (async () => {
         try {
-            await khoiTaoDuLieu();
+            if (db) {
+                await khoiTaoDuLieu();
+            }
             await khoiPhucTrangThai();
         } catch (err) {
             console.error("Không thể khởi tạo MEDBUDDY:", err);
