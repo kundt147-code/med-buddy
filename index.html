@@ -1,222 +1,81 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEDBUDDY</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDBUDDY</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <header class="top-header">
-    <button class="menu-btn" type="button" aria-label="Mở menu">☰</button>
-    <div class="brand">
-        <div class="brand-logo">♥</div>
-        <div>
-            <h1>MEDBUDDY</h1>
-            <p>Vì sức khỏe người thân</p>
-        </div>
-    </div>
+  <button class="menu-btn" type="button" onclick="moMenu()" aria-label="Mở menu">☰</button>
+  <div class="brand"><img src="medbuddy-logo.svg" class="brand-logo" alt="MEDBUDDY"><div><h1>MEDBUDDY</h1><p>Vì sức khỏe người thân</p></div></div>
+  <button class="scan-demo-btn" type="button" onclick="baoDangPhatTrien()" aria-label="Quét QR">⌁<span>⌁</span></button>
 </header>
-
+<div id="menuOverlay" class="menu-overlay" onclick="dongMenu()"></div>
+<aside id="sideMenu" class="side-menu">
+  <div class="menu-head"><strong>MENU</strong><button type="button" onclick="dongMenu()">×</button></div>
+  <button onclick="veTrangChinh();dongMenu()">⌂ <span>Trang chủ</span></button>
+  <button onclick="moLichSu();dongMenu()">◷ <span>Lịch sử</span></button>
+  <button onclick="moQuanLyNguoi();dongMenu()">● <span>Thông tin người sử dụng</span></button>
+  <button onclick="baoDangPhatTrien();dongMenu()">⚙ <span>Cài đặt</span></button>
+</aside>
 <main>
-    <!-- TRANG CHÍNH -->
-    <section id="trangChinh" class="page">
-        <div class="page-heading">
-            <div>
-                <h2>MEDBUDDY-1</h2>
-                <p>Chọn ngăn thuốc cần cài đặt</p>
-            </div>
-        </div>
+<section id="trangChinh" class="page">
+  <div class="page-heading"><div><h2>MEDBUDDY-1</h2><p>Chọn ngăn thuốc cần cài đặt</p></div></div>
+  <div class="qr-card"><div class="qr-text"><h3>Mã QR của tủ</h3><p>Quét mã để mở tủ MEDBUDDY-1</p><strong>MEDBUDDY-1</strong></div><div class="ma-qr"><img src="qr-medbuddy-1.png" alt="QR MEDBUDDY-1"></div></div>
+  <div id="tuThuoc" class="tu-thuoc">
+    <div class="buoi-label sang"><span>☀</span><strong>Sáng</strong></div>
+    <button class="ngan ngan-sang" onclick="moNgan(1)"><span>Sáng 1</span><small id="thongTin1">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-sang" onclick="moNgan(2)"><span>Sáng 2</span><small id="thongTin2">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-sang" onclick="moNgan(3)"><span>Sáng 3</span><small id="thongTin3">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-sang" onclick="moNgan(4)"><span>Sáng 4</span><small id="thongTin4">Chưa có thông tin</small><i>✦</i></button>
+    <div class="buoi-label trua"><span>☼</span><strong>Trưa</strong></div>
+    <button class="ngan ngan-trua" onclick="moNgan(5)"><span>Trưa 1</span><small id="thongTin5">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-trua" onclick="moNgan(6)"><span>Trưa 2</span><small id="thongTin6">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-trua" onclick="moNgan(7)"><span>Trưa 3</span><small id="thongTin7">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-trua" onclick="moNgan(8)"><span>Trưa 4</span><small id="thongTin8">Chưa có thông tin</small><i>✦</i></button>
+    <div class="buoi-label toi"><span>☾</span><strong>Tối</strong></div>
+    <button class="ngan ngan-toi" onclick="moNgan(9)"><span>Tối 1</span><small id="thongTin9">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-toi" onclick="moNgan(10)"><span>Tối 2</span><small id="thongTin10">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-toi" onclick="moNgan(11)"><span>Tối 3</span><small id="thongTin11">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-toi" onclick="moNgan(12)"><span>Tối 4</span><small id="thongTin12">Chưa có thông tin</small><i>✦</i></button>
+    <div class="buoi-label khac"><span>✦</span><strong>Khác</strong></div>
+    <button class="ngan ngan-khac" onclick="moNgan(13)"><span>Khác 1</span><small id="thongTin13">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-khac" onclick="moNgan(14)"><span>Khác 2</span><small id="thongTin14">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-khac" onclick="moNgan(15)"><span>Khác 3</span><small id="thongTin15">Chưa có thông tin</small><i>✦</i></button>
+    <button class="ngan ngan-khac" onclick="moNgan(16)"><span>Khác 4</span><small id="thongTin16">Chưa có thông tin</small><i>✦</i></button>
+  </div>
+</section>
 
-        <div class="qr-card">
-            <div class="qr-text">
-                <h3>Mã QR của tủ</h3>
-                <p>Quét mã để mở tủ MEDBUDDY-1</p>
-                <strong id="maTuHienThi">MEDBUDDY-1</strong>
-            </div>
-            <div class="ma-qr">
-                <img id="qrImage" src="" alt="Mã QR MEDBUDDY-1">
-            </div>
-        </div>
+<section id="caiDat" class="page detail-page" style="display:none">
+  <div class="detail-topbar"><button class="back-btn" onclick="quayLaiTu()">← Quay lại</button><button class="link-top-btn" onclick="moQuanLyNguoi()">Quản lý người sử dụng</button></div>
+  <h2>Chi tiết ngăn thuốc</h2><p class="detail-subtitle"><strong id="soNgan"></strong></p>
+  <div class="detail-card">
+    <div class="view-banner"><span class="view-icon">▦</span><div><strong id="trangThaiNgan">Chế độ xem</strong><small id="moTaTrangThai">Thông tin hiện tại của ngăn</small></div></div>
+    <div class="user-summary"><div class="avatar">👤</div><div><p class="muted">Người sử dụng</p><button id="tenHoSo" class="person-link" onclick="moNguoiTuNgan()">Chưa có thông tin</button><span class="role-tag">Xem hồ sơ →</span></div></div>
+    <div class="form-card">
+      <label for="nguoiSuDung">Người sử dụng</label><select id="nguoiSuDung"></select>
+      <div id="hoSoNguoi" class="profile-preview"><p id="thongTinTuoi">Tuổi: Chưa có thông tin</p><p id="thongTinBenh">Tình trạng bệnh: Chưa có thông tin</p></div>
+      <label for="gioUong">Giờ uống</label><div class="time-input-wrap"><span>◷</span><input type="time" id="gioUong"></div>
+      <label for="loiNhan">Lời nhắn</label><textarea id="loiNhan" placeholder="Nhập lời nhắn"></textarea>
+      <div class="reminder-box"><div class="reminder-head"><div class="reminder-title"><span class="bell-icon">♧</span><div><strong>Thông báo</strong><small>Nhắc khi đến giờ uống thuốc</small></div></div><label class="switch"><input type="checkbox" id="batNhac"><span class="slider"></span></label></div><div class="reminder-info">Đến giờ uống thuốc sẽ thông báo <strong>3 lần</strong><br>Nhắc lại sau mỗi <strong>5 phút</strong> cho đến khi có người lấy thuốc.</div></div>
+      <div class="form-actions" id="nutNhap"><button class="primary-btn" onclick="batDauNhap()">Nhập</button><button class="secondary-btn" onclick="huyNhap()">Hủy</button></div>
+      <div class="form-actions" id="nutLuaChonNhap" style="display:none"><button class="primary-btn" onclick="luuMoi()">Lưu mới</button><button class="edit-btn" onclick="batDauChinhSuaNgan()">Chỉnh sửa</button><button class="secondary-btn" onclick="huyNhap()">Hủy</button></div>
+      <div class="form-actions" id="nutCaiDatDangSua" style="display:none"><button class="primary-btn" onclick="luuChinhSuaNgan()">Lưu thay đổi</button><button class="secondary-btn" onclick="huyChinhSuaNgan()">Hủy</button></div>
+    </div>
+  </div>
+</section>
 
-        <div id="tuThuoc" class="tu-thuoc">
-            <div class="buoi-label sang"><span class="buoi-icon">☀</span><strong>Sáng</strong></div>
-            <button class="ngan" type="button" onclick="moNgan(1)"><span>Ngăn 1</span><small id="thongTin1"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(2)"><span>Ngăn 2</span><small id="thongTin2"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(3)"><span>Ngăn 3</span><small id="thongTin3"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(4)"><span>Ngăn 4</span><small id="thongTin4"></small></button>
-
-            <div class="buoi-label trua"><span class="buoi-icon">☀</span><strong>Trưa</strong></div>
-            <button class="ngan" type="button" onclick="moNgan(5)"><span>Ngăn 5</span><small id="thongTin5"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(6)"><span>Ngăn 6</span><small id="thongTin6"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(7)"><span>Ngăn 7</span><small id="thongTin7"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(8)"><span>Ngăn 8</span><small id="thongTin8"></small></button>
-
-            <div class="buoi-label toi"><span class="buoi-icon">☾</span><strong>Tối</strong></div>
-            <button class="ngan" type="button" onclick="moNgan(9)"><span>Ngăn 9</span><small id="thongTin9"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(10)"><span>Ngăn 10</span><small id="thongTin10"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(11)"><span>Ngăn 11</span><small id="thongTin11"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(12)"><span>Ngăn 12</span><small id="thongTin12"></small></button>
-
-            <div class="buoi-label khac"><span class="buoi-icon">✦</span><strong>Khác</strong></div>
-            <button class="ngan" type="button" onclick="moNgan(13)"><span>Ngăn 13</span><small id="thongTin13"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(14)"><span>Ngăn 14</span><small id="thongTin14"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(15)"><span>Ngăn 15</span><small id="thongTin15"></small></button>
-            <button class="ngan" type="button" onclick="moNgan(16)"><span>Ngăn 16</span><small id="thongTin16"></small></button>
-        </div>
-    </section>
-
-    <!-- CHI TIẾT NGĂN -->
-    <section id="caiDat" class="page detail-page" style="display:none;">
-        <div class="detail-topbar">
-            <button class="back-btn" type="button" onclick="quayLaiTu()">← Quay lại</button>
-            <button class="link-top-btn" type="button" onclick="moQuanLyNguoi()">Quản lý người sử dụng</button>
-        </div>
-
-        <h2>Chi tiết ngăn thuốc</h2>
-        <p class="detail-subtitle"><strong id="soNgan"></strong></p>
-
-        <div class="detail-card">
-            <div class="user-summary">
-                <div class="avatar">👤</div>
-                <div>
-                    <p class="muted">Người sử dụng</p>
-                    <h3 id="tenHoSo">Chưa có thông tin</h3>
-                    <span class="role-tag">Người thân</span>
-                </div>
-            </div>
-
-            <div class="form-card">
-                <label for="nguoiSuDung">Người sử dụng</label>
-                <select id="nguoiSuDung">
-                    <option value="">-- Chọn người sử dụng --</option>
-                </select>
-
-                <div id="hoSoNguoi" class="profile-preview">
-                    <p id="thongTinTuoi">Tuổi: Chưa có thông tin</p>
-                    <p id="thongTinBenh">Tình trạng bệnh: Chưa có thông tin</p>
-                </div>
-
-                <label for="gioUong">Giờ uống</label>
-                <div class="time-input-wrap">
-                    <span class="time-icon">◷</span>
-                    <input type="time" id="gioUong">
-                </div>
-
-                <label for="loiNhan">Lời nhắn</label>
-                <textarea id="loiNhan" placeholder="Nhập lời nhắn"></textarea>
-
-                <!-- THÔNG BÁO -->
-                <div class="reminder-box">
-                    <div class="reminder-head">
-                        <div class="reminder-title">
-                            <span class="bell-icon">♧</span>
-                            <div>
-                                <strong>Thông báo</strong>
-                                <small>Nhắc khi đến giờ uống thuốc</small>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="batNhac">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div id="thongTinNhac" class="reminder-info">
-                        Đến giờ uống thuốc sẽ thông báo <strong>3 lần</strong><br>
-                        Nhắc lại sau mỗi <strong>5 phút</strong> cho đến khi có người lấy thuốc.
-                    </div>
-                </div>
-
-                <div class="form-actions" id="nutCaiDatMoi">
-                    <button class="primary-btn" type="button" onclick="luuMoi()">Lưu mới</button>
-                    <button class="secondary-btn" type="button" onclick="quayLaiTu()">Hủy</button>
-                </div>
-
-                <div class="form-actions" id="nutCaiDatDaCo" style="display:none;">
-                    <button class="primary-btn" type="button" onclick="batDauChinhSuaNgan()">Chỉnh sửa</button>
-                    <button class="secondary-btn" type="button" onclick="quayLaiTu()">Quay lại</button>
-                </div>
-
-                <div class="form-actions" id="nutCaiDatDangSua" style="display:none;">
-                    <button class="primary-btn" type="button" onclick="luuChinhSuaNgan()">Lưu thay đổi</button>
-                    <button class="secondary-btn" type="button" onclick="huyChinhSuaNgan()">Hủy</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- QUẢN LÝ NGƯỜI -->
-    <section id="quanLyNguoi" class="page management-page" style="display:none;">
-        <button class="back-btn" type="button" onclick="dongQuanLyNguoi()">← Quay lại</button>
-        <div class="page-heading">
-            <div>
-                <h2>Quản lý người sử dụng</h2>
-                <p>Thông tin những người đang sử dụng tủ</p>
-            </div>
-            <button class="primary-btn" type="button" onclick="moThemNguoi()">+ Thêm người</button>
-        </div>
-        <div id="danhSachNguoiQuanLy" class="people-list"></div>
-    </section>
-
-    <!-- THÔNG TIN NGƯỜI -->
-    <section id="thongTinNguoiQuanLy" class="page management-page" style="display:none;">
-        <button class="back-btn" type="button" onclick="quayLaiDanhSachNguoi()">← Danh sách người</button>
-        <h2>Thông tin người sử dụng</h2>
-        <div class="person-card">
-            <div id="khuVucThongTinNguoi"></div>
-            <div id="nutXemNguoi" class="person-actions">
-                <button class="primary-btn" type="button" onclick="moChinhSuaNguoi()">Chỉnh sửa</button>
-                <button class="danger-btn" type="button" onclick="xoaNguoi()">Xóa</button>
-            </div>
-            <div id="nutSuaNguoi" class="person-actions" style="display:none;">
-                <button class="primary-btn" type="button" onclick="luuChinhSuaNguoi()">Lưu</button>
-                <button class="secondary-btn" type="button" onclick="huyChinhSuaNguoi()">Hủy</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- THÊM NGƯỜI -->
-    <section id="themNguoi" class="page management-page" style="display:none;">
-        <button class="back-btn" type="button" onclick="dongThemNguoi()">← Quay lại</button>
-        <h2>Thêm người sử dụng</h2>
-        <div class="person-card form-card">
-            <label for="tenNguoiMoi">Tên người sử dụng</label>
-            <input type="text" id="tenNguoiMoi" placeholder="Nhập tên">
-            <label for="ngaySinhNguoiMoi">Ngày sinh</label>
-            <input type="date" id="ngaySinhNguoiMoi">
-            <label for="benhNguoiMoi">Tình trạng bệnh</label>
-            <input type="text" id="benhNguoiMoi" placeholder="Nhập tình trạng bệnh">
-            <label for="thuocNguoiMoi">Các loại thuốc đang dùng</label>
-            <textarea id="thuocNguoiMoi" placeholder="Nhập các loại thuốc"></textarea>
-            <label for="ghiChuNguoiMoi">Ghi chú</label>
-            <textarea id="ghiChuNguoiMoi" placeholder="Nhập ghi chú"></textarea>
-            <div class="form-actions">
-                <button class="primary-btn" type="button" onclick="themNguoi()">Thêm người</button>
-                <button class="secondary-btn" type="button" onclick="dongThemNguoi()">Hủy</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- LỊCH SỬ -->
-    <section id="lichSu" class="page management-page" style="display:none;">
-        <div class="page-heading">
-            <div>
-                <h2>Lịch sử uống thuốc</h2>
-                <p>Các lần cài đặt được lưu trên thiết bị này</p>
-            </div>
-        </div>
-        <div id="danhSachLichSu" class="history-list"></div>
-    </section>
+<section id="quanLyNguoi" class="page management-page" style="display:none"><button class="back-btn" onclick="dongQuanLyNguoi()">← Quay lại</button><div class="page-heading"><div><h2>Quản lý người sử dụng</h2><p>Thông tin những người đang sử dụng tủ</p></div><button class="primary-btn" onclick="moThemNguoi()">+ Thêm người</button></div><div id="danhSachNguoiQuanLy" class="people-list"></div></section>
+<section id="thongTinNguoiQuanLy" class="page management-page" style="display:none"><button class="back-btn" onclick="quayLaiDanhSachNguoi()">← Danh sách người</button><h2>Thông tin người sử dụng</h2><div class="person-card"><div id="khuVucThongTinNguoi"></div><div id="nutXemNguoi" class="person-actions"><button class="primary-btn" onclick="moChinhSuaNguoi()">Chỉnh sửa</button><button class="danger-btn" onclick="xoaNguoi()">Xóa</button></div><div id="nutSuaNguoi" class="person-actions" style="display:none"><button class="primary-btn" onclick="luuChinhSuaNguoi()">Lưu</button><button class="secondary-btn" onclick="huyChinhSuaNguoi()">Hủy</button></div></div></section>
+<section id="themNguoi" class="page management-page" style="display:none"><button class="back-btn" onclick="dongThemNguoi()">← Quay lại</button><h2>Thêm người sử dụng</h2><div class="person-card form-card"><label>Tên người sử dụng</label><input id="tenNguoiMoi"><label>Ngày sinh</label><input id="ngaySinhNguoiMoi" type="date"><small class="date-help">Ngày sinh sẽ hiển thị theo dạng dd/mm/yyyy</small><label>Tình trạng bệnh</label><input id="benhNguoiMoi"><label>Các loại thuốc đang dùng</label><textarea id="thuocNguoiMoi"></textarea><label>Ghi chú</label><textarea id="ghiChuNguoiMoi"></textarea><div class="form-actions"><button class="primary-btn" onclick="themNguoi()">Thêm người</button><button class="secondary-btn" onclick="dongThemNguoi()">Hủy</button></div></div></section>
+<section id="lichSu" class="page management-page" style="display:none"><div class="page-heading"><div><h2>Lịch sử</h2><p>Bấm vào một dòng để xem lại thông tin đã nhập.</p></div></div><div id="danhSachLichSu" class="history-list"></div></section>
+<section id="xemLichSu" class="page detail-page" style="display:none"><div class="detail-topbar"><button class="back-btn" onclick="moLichSu()">← Lịch sử</button></div><h2>Xem lịch sử</h2><p class="detail-subtitle" id="tieuDeLichSu"></p><div class="detail-card history-view-card"><div class="readonly-badge">CHỈ XEM</div><div id="noiDungXemLichSu"></div></div></section>
 </main>
 
-<footer class="bottom-nav">
-    <button id="navTrangChu" class="active" type="button" onclick="veTrangChinh()"><span>⌂</span><small>Trang chủ</small></button>
-    <button id="navLichSu" type="button" onclick="moLichSu()"><span>◷</span><small>Lịch sử</small></button>
-    <button id="navThongTin" type="button" onclick="moQuanLyNguoi()"><span>●</span><small>Thông tin</small></button>
-    <button id="navCaiDat" type="button"><span>⚙</span><small>Cài đặt</small></button>
-</footer>
-
+<div id="modal" class="modal-wrap" style="display:none"><div class="modal-box"><div class="modal-icon" id="modalIcon">✓</div><h3 id="modalTitle">Thông báo</h3><p id="modalMessage"></p><div id="modalActions" class="modal-actions"></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
 </body>
 </html>

@@ -1,536 +1,140 @@
-const maTu = "MEDBUDDY-1";
+/* MEDBUDDY - Supabase sync version */
+const SUPABASE_URL = "https://zkbqjmpwxaukfytnnjjl.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_442VMaVK-Dvy92tJ0Ky_Fw_FT5Rbbg3";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const thamSo = new URLSearchParams(window.location.search);
-const maTuTuURL = thamSo.get("tu");
-
-if (maTuTuURL) {
-    document.getElementById("maTuHienThi").textContent = maTuTuURL;
-}
-
-let duLieuNgan = JSON.parse(localStorage.getItem("duLieuNgan")) || {};
-let danhSachNguoi = JSON.parse(localStorage.getItem("danhSachNguoi")) || [
-    {
-        id: "nguoi-1",
-        ten: "Nguyễn Văn A",
-        hoSo: {
-            ngaySinh: "1956-05-20",
-            tinhTrangBenh: "Tiểu đường, huyết áp cao",
-            thuocDangDung: "Metformin, Amlodipine",
-            ghiChu: "Cần được nhắc uống thuốc đúng giờ"
-        }
-    },
-    {
-        id: "nguoi-2",
-        ten: "Trần Thị B",
-        hoSo: {
-            ngaySinh: "1960-08-15",
-            tinhTrangBenh: "Huyết áp cao",
-            thuocDangDung: "Amlodipine",
-            ghiChu: ""
-        }
-    },
-    {
-        id: "nguoi-3",
-        ten: "Lê Văn C",
-        hoSo: {
-            ngaySinh: "1958-03-10",
-            tinhTrangBenh: "Chưa có thông tin",
-            thuocDangDung: "Chưa có thông tin",
-            ghiChu: ""
-        }
-    }
-];
-
-let lichSu = JSON.parse(localStorage.getItem("lichSuMEDBUDDY")) || [];
+const maTu = thamSo.get("tu") || "MEDBUDDY-1";
+let duLieuNgan = {};
+let danhSachNguoi = [];
+let lichSu = [];
 let soNganHienTai = null;
 let nguoiDangXem = null;
+let dangNhap = false;
 let dangChinhSuaNgan = false;
+let trangTruocQuanLy = "trangChinh";
+let nguoiTuNgan = null;
+let dangTaiDuLieu = false;
 
-function khoiTaoQR() {
-    const qrImage = document.getElementById("qrImage");
-    const urlTu = window.location.origin + window.location.pathname + "?tu=" + encodeURIComponent(maTu);
-    qrImage.src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(urlTu);
+function escapeHTML(t) { return String(t ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+function hienThiModal(title,msg,type="success",confirmText="Đóng",onConfirm=null){
+    const m=document.getElementById("modal");
+    document.getElementById("modalTitle").textContent=title;
+    document.getElementById("modalMessage").textContent=msg;
+    document.getElementById("modalIcon").textContent=type==="confirm"?"?":type==="error"?"!":"✓";
+    const a=document.getElementById("modalActions"); a.innerHTML="";
+    if(type==="confirm"){
+        const c=document.createElement("button"); c.className="secondary-btn"; c.textContent="Hủy"; c.onclick=()=>dongModal();
+        const ok=document.createElement("button"); ok.className=type==="confirm"?"danger-btn":"primary-btn"; ok.textContent=confirmText;
+        ok.onclick=()=>{dongModal();if(onConfirm)onConfirm()}; a.append(c,ok);
+    } else { const b=document.createElement("button"); b.className="primary-btn"; b.textContent=confirmText; b.onclick=dongModal; a.append(b); }
+    m.style.display="grid";
+}
+function dongModal(){document.getElementById("modal").style.display="none"}
+function baoDangPhatTrien(){hienThiModal("Thông báo","Chức năng đang trong giai đoạn phát triển","info")}
+function moMenu(){document.getElementById("sideMenu").classList.add("open");document.getElementById("menuOverlay").classList.add("open")}
+function dongMenu(){document.getElementById("sideMenu").classList.remove("open");document.getElementById("menuOverlay").classList.remove("open")}
+function anTatCaTrang(){["trangChinh","caiDat","quanLyNguoi","thongTinNguoiQuanLy","themNguoi","lichSu","xemLichSu"].forEach(id=>document.getElementById(id).style.display="none")}
+function veTrangChinh(){anTatCaTrang();document.getElementById("trangChinh").style.display="block";hienThiDuLieuNgan()}
+function tinhTuoi(iso){if(!iso)return"";const d=new Date(iso+"T00:00:00"),n=new Date();let age=n.getFullYear()-d.getFullYear();if(n.getMonth()<d.getMonth()||(n.getMonth()===d.getMonth()&&n.getDate()<d.getDate()))age--;return age}
+function dinhDangNgaySinh(iso){if(!iso)return"Chưa có thông tin";const [y,m,d]=iso.split("-");return `${d}/${m}/${y}`}
+function dinhDangThoiGian(v){if(!v)return"";if(/^\d{2}:\d{2}/.test(v))return v.slice(0,5);const d=new Date(v);return isNaN(d)?String(v):d.toLocaleDateString("vi-VN")+" "+d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}
+function tenNgan(n){if(n<=4)return`Sáng ${n}`;if(n<=8)return`Trưa ${n-4}`;if(n<=12)return`Tối ${n-8}`;return`Khác ${n-12}`}
+function hienThiDanhSachNguoi(){const s=document.getElementById("nguoiSuDung");if(!s)return;s.innerHTML='<option value="">-- Chọn người sử dụng --</option>';danhSachNguoi.forEach(n=>{const o=document.createElement("option");o.value=n.id;o.textContent=n.ten;s.appendChild(o)})}
+function hienThiHoSoTrongNgan(id){const n=danhSachNguoi.find(x=>String(x.id)===String(id));const ten=document.getElementById("tenHoSo");if(!n){ten.textContent="Chưa có thông tin";document.getElementById("thongTinTuoi").textContent="Tuổi: Chưa có thông tin";document.getElementById("thongTinBenh").textContent="Tình trạng bệnh: Chưa có thông tin";nguoiTuNgan=null;return}nguoiTuNgan=n.id;ten.textContent=n.ten;document.getElementById("thongTinTuoi").textContent="Tuổi: "+(n.ngay_sinh?tinhTuoi(n.ngay_sinh):"Chưa có thông tin");document.getElementById("thongTinBenh").textContent="Tình trạng bệnh: "+(n.tinh_trang_benh||"Chưa có thông tin")}
+function datKhoaForm(khoa){["nguoiSuDung","gioUong","loiNhan","batNhac"].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=khoa})}
+function capNhatNutNgap(){document.getElementById("nutNhap").style.display=!dangNhap&&!dangChinhSuaNgan?"flex":"none";document.getElementById("nutLuaChonNhap").style.display=dangNhap&&!dangChinhSuaNgan?"flex":"none";document.getElementById("nutCaiDatDangSua").style.display=dangChinhSuaNgan?"flex":"none";datKhoaForm(!dangNhap&&!dangChinhSuaNgan);document.getElementById("trangThaiNgan").textContent=dangChinhSuaNgan?"Đang chỉnh sửa":dangNhap?"Đang nhập thông tin":"Chế độ xem";document.getElementById("moTaTrangThai").textContent=dangChinhSuaNgan?"Chỉnh sửa dòng lịch sử hiện tại":dangNhap?"Chọn cách lưu thông tin":"Thông tin hiện tại của ngăn"}
+
+async function taiDuLieuTuDB(){
+    dangTaiDuLieu=true;
+    const {data: people,error:e1}=await db.from("nguoi_su_dung").select("*").eq("ma_tu",maTu).order("id");
+    if(e1) throw e1;
+    danhSachNguoi=people||[];
+    const {data: slots,error:e2}=await db.from("ngan_thuoc").select("*").eq("ma_tu",maTu).order("so_ngan");
+    if(e2) throw e2;
+    duLieuNgan={};
+    (slots||[]).forEach(x=>{duLieuNgan[x.so_ngan]={id:x.id,nguoiSuDung:x.nguoi_su_dung_id,gioUong:x.gio_uong||"",loiNhan:x.loi_nhan||"",batNhac:x.bat_nhac!==false}});
+    const {data: history,error:e3}=await db.from("lich_su").select("*").eq("ma_tu",maTu).order("updated_at",{ascending:false});
+    if(e3) throw e3;
+    lichSu=history||[];
+    hienThiDanhSachNguoi(); hienThiDuLieuNgan();
+    dangTaiDuLieu=false;
 }
 
-function tinhTuoi(ngaySinh) {
-    if (!ngaySinh) return "";
-    const ngayHienTai = new Date();
-    const ngaySinhDate = new Date(ngaySinh);
-    let tuoi = ngayHienTai.getFullYear() - ngaySinhDate.getFullYear();
-    const chuaDenSinhNhat =
-        ngayHienTai.getMonth() < ngaySinhDate.getMonth() ||
-        (ngayHienTai.getMonth() === ngaySinhDate.getMonth() && ngayHienTai.getDate() < ngaySinhDate.getDate());
-    if (chuaDenSinhNhat) tuoi--;
-    return tuoi;
+async function khoiTaoDuLieu(){
+    try{
+        const {data: tu,error}=await db.from("tu_thuoc").select("ma_tu").eq("ma_tu",maTu).maybeSingle();
+        if(error) throw error;
+        if(!tu){const r=await db.from("tu_thuoc").insert({ma_tu:maTu,ten_tu:maTu});if(r.error)throw r.error;}
+        const {count,error:e}=await db.from("nguoi_su_dung").select("id",{count:"exact",head:true}).eq("ma_tu",maTu);
+        if(e)throw e;
+        if(count===0){
+            const defaults=[
+                {ma_tu:maTu,ten:"Nguyễn Văn A",ngay_sinh:"1956-05-20",tinh_trang_benh:"Tiểu đường, huyết áp cao",thuoc_dang_dung:"Metformin, Amlodipine",ghi_chu:"Cần được nhắc uống thuốc đúng giờ"},
+                {ma_tu:maTu,ten:"Trần Thị B",ngay_sinh:"1960-08-15",tinh_trang_benh:"Huyết áp cao",thuoc_dang_dung:"Amlodipine",ghi_chu:""},
+                {ma_tu:maTu,ten:"Lê Văn C",ngay_sinh:"1958-03-10",tinh_trang_benh:"Chưa có thông tin",thuoc_dang_dung:"Chưa có thông tin",ghi_chu:""}
+            ];
+            const r=await db.from("nguoi_su_dung").insert(defaults);if(r.error)throw r.error;
+        }
+        await taiDuLieuTuDB();
+    }catch(err){dangTaiDuLieu=false;console.error(err);hienThiModal("Không thể kết nối","Không thể tải dữ liệu MEDBUDDY. Kiểm tra Supabase và cấu hình database.","error");}
 }
 
-function anTatCaTrang() {
-    ["trangChinh", "caiDat", "quanLyNguoi", "thongTinNguoiQuanLy", "themNguoi", "lichSu"].forEach(function(id) {
-        document.getElementById(id).style.display = "none";
-    });
-}
+async function moNgan(n){soNganHienTai=n;dangNhap=false;dangChinhSuaNgan=false;anTatCaTrang();document.getElementById("caiDat").style.display="block";document.getElementById("soNgan").textContent=`MED 1 - ${tenNgan(n)}`;hienThiDanhSachNguoi();const d=duLieuNgan[n];document.getElementById("nguoiSuDung").value=d?.nguoiSuDung||"";document.getElementById("gioUong").value=d?.gioUong||"";document.getElementById("loiNhan").value=d?.loiNhan||"";document.getElementById("batNhac").checked=d?.batNhac!==false;hienThiHoSoTrongNgan(d?.nguoiSuDung||"");capNhatNutNgap()}
+function quayLaiTu(){if(dangNhap||dangChinhSuaNgan){hienThiModal("Xác nhận","Bạn có chắc muốn ngừng nhập thông tin cho ngăn này không?","confirm","Ngừng nhập",()=>{dangNhap=false;dangChinhSuaNgan=false;moNgan(soNganHienTai)})}else veTrangChinh()}
+function layForm(){return{nguoiSuDung:document.getElementById("nguoiSuDung").value?Number(document.getElementById("nguoiSuDung").value):null,gioUong:document.getElementById("gioUong").value,loiNhan:document.getElementById("loiNhan").value.trim(),batNhac:document.getElementById("batNhac").checked}}
+function kiemTra(d){if(!d.nguoiSuDung||!d.gioUong||!d.loiNhan){hienThiModal("Thiếu thông tin","Vui lòng nhập đầy đủ thông tin cho ngăn này.","error");return false}return true}
+function batDauNhap(){dangNhap=true;dangChinhSuaNgan=false;capNhatNutNgap()}
+function huyNhap(){if(!dangNhap&&!dangChinhSuaNgan){veTrangChinh();return}hienThiModal("Xác nhận","Bạn có chắc muốn ngừng nhập thông tin cho ngăn này không?","confirm","Ngừng nhập",()=>{dangNhap=false;dangChinhSuaNgan=false;moNgan(soNganHienTai)})}
 
-function capNhatNav(activeId) {
-    ["navTrangChu", "navLichSu", "navThongTin", "navCaiDat"].forEach(function(id) {
-        const nut = document.getElementById(id);
-        if (nut) nut.classList.toggle("active", id === activeId);
-    });
-}
+async function luuMoi(){const d=layForm();if(!kiemTra(d))return;try{
+    const {data:slot,error:e1}=await db.from("ngan_thuoc").upsert({ma_tu:maTu,so_ngan:soNganHienTai,nguoi_su_dung_id:d.nguoiSuDung,gio_uong:d.gioUong,loi_nhan:d.loiNhan,bat_nhac:d.batNhac,updated_at:new Date().toISOString()},{onConflict:"ma_tu,so_ngan"}).select().single();
+    if(e1)throw e1;
+    const n=danhSachNguoi.find(x=>Number(x.id)===d.nguoiSuDung);
+    const {error:e2}=await db.from("lich_su").insert({ma_tu:maTu,so_ngan:soNganHienTai,nguoi_su_dung_id:d.nguoiSuDung,ten_nguoi:n?.ten||"Chưa có thông tin",gio_uong:d.gioUong,loi_nhan:d.loiNhan,bat_nhac:d.batNhac});
+    if(e2)throw e2;
+    duLieuNgan[soNganHienTai]={id:slot.id,...d};
+    await taiDuLieuTuDB();
+    hienThiModal("Đã lưu","Đã lưu mới thành công!","success","Đóng",()=>{dangNhap=false;moNgan(soNganHienTai)});
+}catch(err){console.error(err);hienThiModal("Lỗi lưu dữ liệu","Không thể lưu dữ liệu. Vui lòng thử lại.","error")}}
 
-function veTrangChinh() {
-    anTatCaTrang();
-    document.getElementById("trangChinh").style.display = "block";
-    capNhatNav("navTrangChu");
-    hienThiDuLieuNgan();
-}
-
-function hienThiDanhSachNguoi() {
-    const select = document.getElementById("nguoiSuDung");
-    select.innerHTML = '<option value="">-- Chọn người sử dụng --</option>';
-    danhSachNguoi.forEach(function(nguoi) {
-        const option = document.createElement("option");
-        option.value = nguoi.id;
-        option.textContent = nguoi.ten;
-        select.appendChild(option);
-    });
-}
-
-function hienThiHoSoTrongNgan(idNguoi) {
-    const ten = document.getElementById("tenHoSo");
-    const tuoi = document.getElementById("thongTinTuoi");
-    const benh = document.getElementById("thongTinBenh");
-
-    if (!idNguoi) {
-        ten.textContent = "Chưa có thông tin";
-        tuoi.textContent = "Tuổi: Chưa có thông tin";
-        benh.textContent = "Tình trạng bệnh: Chưa có thông tin";
-        return;
-    }
-
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === idNguoi; });
-    if (!nguoi) return;
-
-    ten.textContent = nguoi.ten;
-    tuoi.textContent = nguoi.hoSo && nguoi.hoSo.ngaySinh
-        ? "Tuổi: " + tinhTuoi(nguoi.hoSo.ngaySinh)
-        : "Tuổi: Chưa có thông tin";
-    benh.textContent = "Tình trạng bệnh: " + ((nguoi.hoSo && nguoi.hoSo.tinhTrangBenh) || "Chưa có thông tin");
-}
-
-function datCheDoForm(cheDo) {
-    const nguoi = document.getElementById("nguoiSuDung");
-    const gio = document.getElementById("gioUong");
-    const loi = document.getElementById("loiNhan");
-    const nhac = document.getElementById("batNhac");
-
-    const khoa = cheDo === "xem";
-    nguoi.disabled = khoa;
-    gio.disabled = khoa;
-    loi.disabled = khoa;
-    nhac.disabled = khoa;
-
-    document.getElementById("nutCaiDatMoi").style.display = cheDo === "moi" ? "flex" : "none";
-    document.getElementById("nutCaiDatDaCo").style.display = cheDo === "xem" ? "flex" : "none";
-    document.getElementById("nutCaiDatDangSua").style.display = cheDo === "sua" ? "flex" : "none";
-}
-
-function moNgan(soNgan) {
-    soNganHienTai = soNgan;
-    dangChinhSuaNgan = false;
-    anTatCaTrang();
-    document.getElementById("caiDat").style.display = "block";
-    capNhatNav("");
-    document.getElementById("soNgan").textContent = "MED 1 - Ngăn " + soNgan;
-    hienThiDanhSachNguoi();
-
-    const duLieu = duLieuNgan[soNgan];
-    if (duLieu) {
-        document.getElementById("nguoiSuDung").value = duLieu.nguoiSuDung || "";
-        document.getElementById("gioUong").value = duLieu.gioUong || "";
-        document.getElementById("loiNhan").value = duLieu.loiNhan || "";
-        document.getElementById("batNhac").checked = duLieu.batNhac !== false;
-        hienThiHoSoTrongNgan(duLieu.nguoiSuDung);
-        datCheDoForm("xem");
+function batDauChinhSuaNgan(){if(!duLieuNgan[soNganHienTai]){hienThiModal("Chưa có dữ liệu","Ngăn này chưa có dữ liệu để chỉnh sửa.","error");return}dangNhap=false;dangChinhSuaNgan=true;capNhatNutNgap()}
+function huyChinhSuaNgan(){const d=duLieuNgan[soNganHienTai];if(d){document.getElementById("nguoiSuDung").value=d.nguoiSuDung||"";document.getElementById("gioUong").value=d.gioUong||"";document.getElementById("loiNhan").value=d.loiNhan||"";document.getElementById("batNhac").checked=d.batNhac!==false;hienThiHoSoTrongNgan(d.nguoiSuDung)}dangChinhSuaNgan=false;capNhatNutNgap()}
+async function luuChinhSuaNgan(){const d=layForm();if(!kiemTra(d))return;try{
+    const {error:e1}=await db.from("ngan_thuoc").update({nguoi_su_dung_id:d.nguoiSuDung,gio_uong:d.gioUong,loi_nhan:d.loiNhan,bat_nhac:d.batNhac,updated_at:new Date().toISOString()}).eq("ma_tu",maTu).eq("so_ngan",soNganHienTai);
+    if(e1)throw e1;
+    const {data:latest,error:e2}=await db.from("lich_su").select("id").eq("ma_tu",maTu).eq("so_ngan",soNganHienTai).order("updated_at",{ascending:false}).limit(1);
+    if(e2)throw e2;
+    const n=danhSachNguoi.find(x=>Number(x.id)===d.nguoiSuDung);
+    if(latest?.length){
+        const {error:e3}=await db.from("lich_su").update({nguoi_su_dung_id:d.nguoiSuDung,ten_nguoi:n?.ten||"Chưa có thông tin",gio_uong:d.gioUong,loi_nhan:d.loiNhan,bat_nhac:d.batNhac,updated_at:new Date().toISOString()}).eq("id",latest[0].id);
+        if(e3)throw e3;
     } else {
-        document.getElementById("nguoiSuDung").value = "";
-        document.getElementById("gioUong").value = "";
-        document.getElementById("loiNhan").value = "";
-        document.getElementById("batNhac").checked = true;
-        hienThiHoSoTrongNgan("");
-        datCheDoForm("moi");
+        const r=await db.from("lich_su").insert({ma_tu:maTu,so_ngan:soNganHienTai,nguoi_su_dung_id:d.nguoiSuDung,ten_nguoi:n?.ten||"Chưa có thông tin",gio_uong:d.gioUong,loi_nhan:d.loiNhan,bat_nhac:d.batNhac});
+        if(r.error)throw r.error;
     }
-}
+    await taiDuLieuTuDB();
+    hienThiModal("Đã cập nhật","Đã chỉnh sửa thông tin thành công!","success","Đóng",()=>{dangChinhSuaNgan=false;moNgan(soNganHienTai)});
+}catch(err){console.error(err);hienThiModal("Lỗi cập nhật","Không thể cập nhật dữ liệu. Vui lòng thử lại.","error")}}
 
-function quayLaiTu() { veTrangChinh(); }
+document.getElementById("nguoiSuDung").addEventListener("change",e=>hienThiHoSoTrongNgan(e.target.value));
+function moNguoiTuNgan(){if(nguoiTuNgan)moThongTinNguoiQuanLy(nguoiTuNgan)}
+function moQuanLyNguoi(){trangTruocQuanLy=document.getElementById("caiDat").style.display!=="none"?"caiDat":"trangChinh";anTatCaTrang();document.getElementById("quanLyNguoi").style.display="block";hienThiDanhSachNguoiQuanLy()}
+function dongQuanLyNguoi(){if(trangTruocQuanLy==="caiDat"&&soNganHienTai!==null)moNgan(soNganHienTai);else veTrangChinh()}
+function hienThiDanhSachNguoiQuanLy(){const box=document.getElementById("danhSachNguoiQuanLy");box.innerHTML="";danhSachNguoi.forEach(n=>{const b=document.createElement("button");b.className="person-row";b.innerHTML=`<strong>${escapeHTML(n.ten)}</strong><span>Xem thông tin →</span>`;b.onclick=()=>moThongTinNguoiQuanLy(n.id);box.appendChild(b)})}
+function moThongTinNguoiQuanLy(id){const n=danhSachNguoi.find(x=>String(x.id)===String(id));if(!n)return;nguoiDangXem=id;anTatCaTrang();document.getElementById("thongTinNguoiQuanLy").style.display="block";hienThiThongTinNguoi(n);document.getElementById("nutXemNguoi").style.display="flex";document.getElementById("nutSuaNguoi").style.display="none"}
+function hienThiThongTinNguoi(n){const h=n;document.getElementById("khuVucThongTinNguoi").innerHTML=`<div class="user-summary"><div class="avatar">👤</div><div><p class="muted">Người sử dụng</p><h3>${escapeHTML(n.ten)}</h3><span class="role-tag">Hồ sơ người thân</span></div></div><div class="info-grid"><div class="info-item"><strong>Ngày sinh</strong><p>${dinhDangNgaySinh(h.ngay_sinh)}</p></div><div class="info-item"><strong>Tuổi</strong><p>${h.ngay_sinh?tinhTuoi(h.ngay_sinh):"Chưa có thông tin"}</p></div><div class="info-item"><strong>Tình trạng bệnh</strong><p>${escapeHTML(h.tinh_trang_benh||"Chưa có thông tin")}</p></div><div class="info-item"><strong>Các loại thuốc đang dùng</strong><p>${escapeHTML(h.thuoc_dang_dung||"Chưa có thông tin")}</p></div><div class="info-item"><strong>Ghi chú</strong><p>${escapeHTML(h.ghi_chu||"Chưa có thông tin")}</p></div></div>`}
+function quayLaiDanhSachNguoi(){moQuanLyNguoi()}
+function moThemNguoi(){anTatCaTrang();document.getElementById("themNguoi").style.display="block";["tenNguoiMoi","ngaySinhNguoiMoi","benhNguoiMoi","thuocNguoiMoi","ghiChuNguoiMoi"].forEach(id=>document.getElementById(id).value="")}
+function dongThemNguoi(){moQuanLyNguoi()}
+async function themNguoi(){const ten=document.getElementById("tenNguoiMoi").value.trim(),ngay=document.getElementById("ngaySinhNguoiMoi").value;if(!ten||!ngay){hienThiModal("Thiếu thông tin","Tên và ngày sinh là bắt buộc.","error");return}try{const {error}=await db.from("nguoi_su_dung").insert({ma_tu:maTu,ten,ngay_sinh:ngay,tinh_trang_benh:document.getElementById("benhNguoiMoi").value.trim(),thuoc_dang_dung:document.getElementById("thuocNguoiMoi").value.trim(),ghi_chu:document.getElementById("ghiChuNguoiMoi").value.trim()});if(error)throw error;await taiDuLieuTuDB();hienThiModal("Đã thêm người","Đã thêm người sử dụng thành công!","success","Đóng",()=>moQuanLyNguoi())}catch(err){console.error(err);hienThiModal("Lỗi","Không thể thêm người sử dụng.","error")}}
+function moChinhSuaNguoi(){const n=danhSachNguoi.find(x=>String(x.id)===String(nguoiDangXem));if(!n)return;document.getElementById("khuVucThongTinNguoi").innerHTML=`<h3>Chỉnh sửa thông tin</h3><div class="form-card"><label>Tên</label><input class="edit-input" id="suaTenNguoi" value="${escapeHTML(n.ten)}"><label>Ngày sinh</label><input class="edit-input" type="date" id="suaNgaySinhNguoi" value="${n.ngay_sinh||""}"><label>Tình trạng bệnh</label><input class="edit-input" id="suaBenhNguoi" value="${escapeHTML(n.tinh_trang_benh||"")}"><label>Các loại thuốc đang dùng</label><textarea class="edit-textarea" id="suaThuocNguoi">${escapeHTML(n.thuoc_dang_dung||"")}</textarea><label>Ghi chú</label><textarea class="edit-textarea" id="suaGhiChuNguoi">${escapeHTML(n.ghi_chu||"")}</textarea></div>`;document.getElementById("nutXemNguoi").style.display="none";document.getElementById("nutSuaNguoi").style.display="flex"}
+function huyChinhSuaNguoi(){const n=danhSachNguoi.find(x=>String(x.id)===String(nguoiDangXem));if(n)hienThiThongTinNguoi(n);document.getElementById("nutSuaNguoi").style.display="none";document.getElementById("nutXemNguoi").style.display="flex"}
+function luuChinhSuaNguoi(){const n=danhSachNguoi.find(x=>String(x.id)===String(nguoiDangXem));if(!n)return;const ten=document.getElementById("suaTenNguoi").value.trim(),ngay=document.getElementById("suaNgaySinhNguoi").value;if(!ten||!ngay){hienThiModal("Thiếu thông tin","Tên và ngày sinh là bắt buộc.","error");return}hienThiModal("Xác nhận lưu","Bạn có chắc muốn lưu thay đổi thông tin người sử dụng này không?","confirm","Lưu thay đổi",async()=>{try{const {error}=await db.from("nguoi_su_dung").update({ten,ngay_sinh:ngay,tinh_trang_benh:document.getElementById("suaBenhNguoi").value.trim(),thuoc_dang_dung:document.getElementById("suaThuocNguoi").value.trim(),ghi_chu:document.getElementById("suaGhiChuNguoi").value.trim()}).eq("id",n.id).eq("ma_tu",maTu);if(error)throw error;await taiDuLieuTuDB();const fresh=danhSachNguoi.find(x=>Number(x.id)===Number(n.id));hienThiThongTinNguoi(fresh);document.getElementById("nutSuaNguoi").style.display="none";document.getElementById("nutXemNguoi").style.display="flex";hienThiModal("Đã lưu","Đã lưu thông tin thành công!")}catch(err){console.error(err);hienThiModal("Lỗi","Không thể lưu thay đổi.","error")}})}
+function xoaNguoi(){const n=danhSachNguoi.find(x=>String(x.id)===String(nguoiDangXem));if(!n)return;hienThiModal("Xác nhận xóa","Bạn có chắc muốn xóa "+n.ten+" không?","confirm","Xóa",async()=>{try{const {error}=await db.from("nguoi_su_dung").delete().eq("id",n.id).eq("ma_tu",maTu);if(error)throw error;await taiDuLieuTuDB();hienThiModal("Đã xóa","Đã xóa người sử dụng thành công!","success","Đóng",()=>moQuanLyNguoi())}catch(err){console.error(err);hienThiModal("Lỗi","Không thể xóa người sử dụng.","error")}})}
+function hienThiDuLieuNgan(){for(let i=1;i<=16;i++){const o=document.getElementById("thongTin"+i),d=duLieuNgan[i],n=danhSachNguoi.find(x=>Number(x.id)===Number(d?.nguoiSuDung));if(!d||!n){o.className="";o.textContent="Chưa có thông tin"}else{o.className="da-cai-dat";o.innerHTML=`${escapeHTML(n.ten)}<br><b>◷ ${escapeHTML(d.gioUong||"")}</b>`}}}
+function moLichSu(){anTatCaTrang();document.getElementById("lichSu").style.display="block";hienThiLichSu()}
+function hienThiLichSu(){const box=document.getElementById("danhSachLichSu");box.innerHTML="";if(!lichSu.length){box.innerHTML='<div class="history-item">Chưa có lịch sử cài đặt nào.</div>';return}lichSu.forEach(x=>{const d=document.createElement("div");d.className="history-item";d.innerHTML=`<div class="history-item-top"><h3>MED 1 - ${escapeHTML(tenNgan(Number(x.so_ngan)))}</h3><span class="history-time">${escapeHTML(dinhDangThoiGian(x.updated_at||x.created_at))}</span></div><p><strong>Người sử dụng:</strong> ${escapeHTML(x.ten_nguoi||"Chưa có thông tin")}</p><p><strong>Giờ uống:</strong> ${escapeHTML(x.gio_uong||"Chưa có thông tin")}</p><span class="history-badge ${x.bat_nhac===false?"off":""}">${x.bat_nhac===false?"Nhắc nhở tắt":"Nhắc nhở bật"}</span>`;d.onclick=()=>xemLichSu(x.id);box.appendChild(d)})}
+function xemLichSu(id){const x=lichSu.find(h=>Number(h.id)===Number(id));if(!x)return;anTatCaTrang();document.getElementById("xemLichSu").style.display="block";document.getElementById("tieuDeLichSu").textContent=`MED 1 - ${tenNgan(Number(x.so_ngan))} • ${dinhDangThoiGian(x.created_at)}`;const n=danhSachNguoi.find(p=>Number(p.id)===Number(x.nguoi_su_dung_id));document.getElementById("noiDungXemLichSu").innerHTML=`<div class="view-field"><strong>Người sử dụng</strong><button class="history-person-link" onclick="moThongTinNguoiQuanLy(${x.nguoi_su_dung_id||0})">${escapeHTML(n?.ten||x.ten_nguoi||"Chưa có thông tin")} → Xem hồ sơ</button></div><div class="view-field"><strong>Giờ uống</strong>${escapeHTML(x.gio_uong||"Chưa có thông tin")}</div><div class="view-field"><strong>Lời nhắn</strong>${escapeHTML(x.loi_nhan||"Chưa có thông tin")}</div><div class="view-field"><strong>Nhắc nhở</strong>${x.bat_nhac===false?"Đang tắt":"Đang bật"}</div>`}
 
-function layDuLieuForm() {
-    return {
-        nguoiSuDung: document.getElementById("nguoiSuDung").value,
-        gioUong: document.getElementById("gioUong").value,
-        loiNhan: document.getElementById("loiNhan").value.trim(),
-        batNhac: document.getElementById("batNhac").checked
-    };
-}
-
-function kiemTraDuLieu(duLieu) {
-    if (!duLieu.nguoiSuDung || !duLieu.gioUong || !duLieu.loiNhan) {
-        alert("Vui lòng nhập đầy đủ thông tin!");
-        return false;
-    }
-    return true;
-}
-
-function luuDuLieuNgan(duLieu) {
-    duLieuNgan[soNganHienTai] = duLieu;
-    localStorage.setItem("duLieuNgan", JSON.stringify(duLieuNgan));
-}
-
-function taoLichSuMoi(duLieu) {
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === duLieu.nguoiSuDung; });
-    const banGhi = {
-        id: "ls-" + Date.now(),
-        soNgan: soNganHienTai,
-        nguoiSuDung: duLieu.nguoiSuDung,
-        tenNguoi: nguoi ? nguoi.ten : "Chưa có thông tin",
-        gioUong: duLieu.gioUong,
-        loiNhan: duLieu.loiNhan,
-        batNhac: duLieu.batNhac,
-        thoiGianTao: new Date().toISOString(),
-        thoiGianCapNhat: new Date().toISOString()
-    };
-    lichSu.unshift(banGhi);
-    localStorage.setItem("lichSuMEDBUDDY", JSON.stringify(lichSu));
-}
-
-function capNhatLichSuCu(duLieu) {
-    const banGhi = lichSu.find(function(item) { return Number(item.soNgan) === Number(soNganHienTai); });
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === duLieu.nguoiSuDung; });
-
-    if (!banGhi) {
-        taoLichSuMoi(duLieu);
-        return;
-    }
-
-    banGhi.nguoiSuDung = duLieu.nguoiSuDung;
-    banGhi.tenNguoi = nguoi ? nguoi.ten : "Chưa có thông tin";
-    banGhi.gioUong = duLieu.gioUong;
-    banGhi.loiNhan = duLieu.loiNhan;
-    banGhi.batNhac = duLieu.batNhac;
-    banGhi.thoiGianCapNhat = new Date().toISOString();
-    localStorage.setItem("lichSuMEDBUDDY", JSON.stringify(lichSu));
-}
-
-function luuMoi() {
-    const duLieu = layDuLieuForm();
-    if (!kiemTraDuLieu(duLieu)) return;
-
-    luuDuLieuNgan(duLieu);
-    taoLichSuMoi(duLieu);
-    alert("Đã lưu mới thành công!");
-    veTrangChinh();
-}
-
-function batDauChinhSuaNgan() {
-    dangChinhSuaNgan = true;
-    datCheDoForm("sua");
-}
-
-function huyChinhSuaNgan() {
-    if (soNganHienTai === null) return;
-    const duLieu = duLieuNgan[soNganHienTai];
-    if (duLieu) {
-        document.getElementById("nguoiSuDung").value = duLieu.nguoiSuDung || "";
-        document.getElementById("gioUong").value = duLieu.gioUong || "";
-        document.getElementById("loiNhan").value = duLieu.loiNhan || "";
-        document.getElementById("batNhac").checked = duLieu.batNhac !== false;
-        hienThiHoSoTrongNgan(duLieu.nguoiSuDung);
-    }
-    dangChinhSuaNgan = false;
-    datCheDoForm("xem");
-}
-
-function luuChinhSuaNgan() {
-    const duLieu = layDuLieuForm();
-    if (!kiemTraDuLieu(duLieu)) return;
-
-    luuDuLieuNgan(duLieu);
-    capNhatLichSuCu(duLieu);
-    alert("Đã lưu thay đổi thành công!");
-    dangChinhSuaNgan = false;
-    datCheDoForm("xem");
-}
-
-document.getElementById("nguoiSuDung").addEventListener("change", function() {
-    hienThiHoSoTrongNgan(this.value);
-});
-
-function moQuanLyNguoi() {
-    anTatCaTrang();
-    document.getElementById("quanLyNguoi").style.display = "block";
-    capNhatNav("navThongTin");
-    hienThiDanhSachNguoiQuanLy();
-}
-
-function dongQuanLyNguoi() { veTrangChinh(); }
-
-function hienThiDanhSachNguoiQuanLy() {
-    const danhSach = document.getElementById("danhSachNguoiQuanLy");
-    danhSach.innerHTML = "";
-    danhSachNguoi.forEach(function(nguoi) {
-        const dong = document.createElement("button");
-        dong.type = "button";
-        dong.className = "person-row";
-        const ten = document.createElement("strong");
-        ten.textContent = nguoi.ten;
-        const moTa = document.createElement("span");
-        moTa.textContent = "Xem thông tin →";
-        dong.appendChild(ten);
-        dong.appendChild(moTa);
-        dong.onclick = function() { moThongTinNguoiQuanLy(nguoi.id); };
-        danhSach.appendChild(dong);
-    });
-}
-
-function moThongTinNguoiQuanLy(idNguoi) {
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === idNguoi; });
-    if (!nguoi) return;
-    nguoiDangXem = idNguoi;
-    anTatCaTrang();
-    document.getElementById("thongTinNguoiQuanLy").style.display = "block";
-    capNhatNav("navThongTin");
-    hienThiThongTinNguoi(nguoi);
-    document.getElementById("nutXemNguoi").style.display = "flex";
-    document.getElementById("nutSuaNguoi").style.display = "none";
-}
-
-function hienThiThongTinNguoi(nguoi) {
-    const hoSo = nguoi.hoSo || {};
-    document.getElementById("khuVucThongTinNguoi").innerHTML = `
-        <div class="user-summary">
-            <div class="avatar">👤</div>
-            <div>
-                <p class="muted">Người sử dụng</p>
-                <h3>${escapeHTML(nguoi.ten)}</h3>
-                <span class="role-tag">Người thân</span>
-            </div>
-        </div>
-        <div class="info-grid">
-            <div class="info-item"><strong>Ngày sinh</strong><p>${escapeHTML(hoSo.ngaySinh || "Chưa có thông tin")}</p></div>
-            <div class="info-item"><strong>Tuổi</strong><p>${hoSo.ngaySinh ? tinhTuoi(hoSo.ngaySinh) : "Chưa có thông tin"}</p></div>
-            <div class="info-item"><strong>Tình trạng bệnh</strong><p>${escapeHTML(hoSo.tinhTrangBenh || "Chưa có thông tin")}</p></div>
-            <div class="info-item"><strong>Các loại thuốc đang dùng</strong><p>${escapeHTML(hoSo.thuocDangDung || "Chưa có thông tin")}</p></div>
-            <div class="info-item"><strong>Ghi chú</strong><p>${escapeHTML(hoSo.ghiChu || "Chưa có thông tin")}</p></div>
-        </div>`;
-}
-
-function quayLaiDanhSachNguoi() {
-    anTatCaTrang();
-    document.getElementById("quanLyNguoi").style.display = "block";
-    capNhatNav("navThongTin");
-    nguoiDangXem = null;
-    hienThiDanhSachNguoiQuanLy();
-}
-
-function moThemNguoi() {
-    anTatCaTrang();
-    document.getElementById("themNguoi").style.display = "block";
-    document.getElementById("tenNguoiMoi").value = "";
-    document.getElementById("ngaySinhNguoiMoi").value = "";
-    document.getElementById("benhNguoiMoi").value = "";
-    document.getElementById("thuocNguoiMoi").value = "";
-    document.getElementById("ghiChuNguoiMoi").value = "";
-    capNhatNav("navThongTin");
-}
-
-function dongThemNguoi() { moQuanLyNguoi(); }
-
-function themNguoi() {
-    const ten = document.getElementById("tenNguoiMoi").value.trim();
-    const ngaySinh = document.getElementById("ngaySinhNguoiMoi").value;
-    const benh = document.getElementById("benhNguoiMoi").value.trim();
-    const thuoc = document.getElementById("thuocNguoiMoi").value.trim();
-    const ghiChu = document.getElementById("ghiChuNguoiMoi").value.trim();
-
-    if (!ten || !ngaySinh) {
-        alert("Tên và ngày tháng năm sinh là bắt buộc!");
-        return;
-    }
-
-    danhSachNguoi.push({
-        id: "nguoi-" + Date.now(),
-        ten: ten,
-        hoSo: { ngaySinh: ngaySinh, tinhTrangBenh: benh, thuocDangDung: thuoc, ghiChu: ghiChu }
-    });
-
-    localStorage.setItem("danhSachNguoi", JSON.stringify(danhSachNguoi));
-    hienThiDanhSachNguoi();
-    alert("Đã thêm người sử dụng!");
-    moQuanLyNguoi();
-}
-
-function moChinhSuaNguoi() {
-    if (!nguoiDangXem) return;
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === nguoiDangXem; });
-    if (!nguoi) return;
-    const hoSo = nguoi.hoSo || {};
-
-    document.getElementById("khuVucThongTinNguoi").innerHTML = `
-        <h3>Chỉnh sửa thông tin</h3>
-        <div class="form-card">
-            <label>Tên</label><input class="edit-input" type="text" id="suaTenNguoi" value="${escapeHTML(nguoi.ten)}">
-            <label>Ngày sinh</label><input class="edit-input" type="date" id="suaNgaySinhNguoi" value="${hoSo.ngaySinh || ""}">
-            <label>Tình trạng bệnh</label><input class="edit-input" type="text" id="suaBenhNguoi" value="${escapeHTML(hoSo.tinhTrangBenh || "")}">
-            <label>Các loại thuốc đang dùng</label><textarea class="edit-textarea" id="suaThuocNguoi">${escapeHTML(hoSo.thuocDangDung || "")}</textarea>
-            <label>Ghi chú</label><textarea class="edit-textarea" id="suaGhiChuNguoi">${escapeHTML(hoSo.ghiChu || "")}</textarea>
-        </div>`;
-
-    document.getElementById("nutXemNguoi").style.display = "none";
-    document.getElementById("nutSuaNguoi").style.display = "flex";
-}
-
-function huyChinhSuaNguoi() {
-    if (!nguoiDangXem) return;
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === nguoiDangXem; });
-    if (!nguoi) return;
-    hienThiThongTinNguoi(nguoi);
-    document.getElementById("nutSuaNguoi").style.display = "none";
-    document.getElementById("nutXemNguoi").style.display = "flex";
-}
-
-function luuChinhSuaNguoi() {
-    if (!nguoiDangXem) return;
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === nguoiDangXem; });
-    if (!nguoi) return;
-
-    const ten = document.getElementById("suaTenNguoi").value.trim();
-    const ngaySinh = document.getElementById("suaNgaySinhNguoi").value;
-    if (!ten || !ngaySinh) {
-        alert("Tên và ngày tháng năm sinh là bắt buộc!");
-        return;
-    }
-
-    const tenCu = nguoi.ten;
-    nguoi.ten = ten;
-    nguoi.hoSo = {
-        ngaySinh: ngaySinh,
-        tinhTrangBenh: document.getElementById("suaBenhNguoi").value.trim(),
-        thuocDangDung: document.getElementById("suaThuocNguoi").value.trim(),
-        ghiChu: document.getElementById("suaGhiChuNguoi").value.trim()
-    };
-
-    localStorage.setItem("danhSachNguoi", JSON.stringify(danhSachNguoi));
-
-    // Đồng bộ tên trong lịch sử nếu người đó đã có lịch sử.
-    lichSu.forEach(function(item) {
-        if (item.nguoiSuDung === nguoiDangXem) item.tenNguoi = nguoi.ten;
-    });
-    localStorage.setItem("lichSuMEDBUDDY", JSON.stringify(lichSu));
-
-    hienThiThongTinNguoi(nguoi);
-    document.getElementById("nutSuaNguoi").style.display = "none";
-    document.getElementById("nutXemNguoi").style.display = "flex";
-    hienThiDanhSachNguoi();
-    hienThiDuLieuNgan();
-    alert(tenCu !== ten ? "Đã lưu thông tin thành công!" : "Đã lưu thông tin thành công!");
-}
-
-function xoaNguoi() {
-    if (!nguoiDangXem) return;
-    const nguoi = danhSachNguoi.find(function(item) { return item.id === nguoiDangXem; });
-    if (!nguoi) return;
-    if (!confirm("Bạn có chắc muốn xóa " + nguoi.ten + " không?")) return;
-
-    danhSachNguoi = danhSachNguoi.filter(function(item) { return item.id !== nguoiDangXem; });
-
-    Object.keys(duLieuNgan).forEach(function(soNgan) {
-        if (duLieuNgan[soNgan] && duLieuNgan[soNgan].nguoiSuDung === nguoiDangXem) delete duLieuNgan[soNgan];
-    });
-
-    localStorage.setItem("danhSachNguoi", JSON.stringify(danhSachNguoi));
-    localStorage.setItem("duLieuNgan", JSON.stringify(duLieuNgan));
-    hienThiDanhSachNguoi();
-    hienThiDuLieuNgan();
-    alert("Đã xóa người sử dụng!");
-    moQuanLyNguoi();
-}
-
-function hienThiDuLieuNgan() {
-    for (let soNgan = 1; soNgan <= 16; soNgan++) {
-        const oThongTin = document.getElementById("thongTin" + soNgan);
-        if (!oThongTin) continue;
-        const duLieu = duLieuNgan[soNgan];
-
-        if (!duLieu) {
-            oThongTin.className = "";
-            oThongTin.innerHTML = "Chưa có thông tin";
-            continue;
-        }
-
-        const nguoi = danhSachNguoi.find(function(item) { return item.id === duLieu.nguoiSuDung; });
-        if (nguoi) {
-            oThongTin.className = "da-cai-dat";
-            oThongTin.innerHTML = escapeHTML(nguoi.ten) + "<br>" + escapeHTML(duLieu.gioUong || "") + "<br>✓ Đã cài đặt";
-        } else {
-            oThongTin.className = "";
-            oThongTin.innerHTML = "Chưa có thông tin";
-        }
-    }
-}
-
-function moLichSu() {
-    anTatCaTrang();
-    document.getElementById("lichSu").style.display = "block";
-    capNhatNav("navLichSu");
-    hienThiLichSu();
-}
-
-function dinhDangNgay(iso) {
-    if (!iso) return "";
-    const date = new Date(iso);
-    return date.toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" });
-}
-
-function hienThiLichSu() {
-    const danhSach = document.getElementById("danhSachLichSu");
-    danhSach.innerHTML = "";
-
-    if (lichSu.length === 0) {
-        danhSach.innerHTML = '<div class="history-empty">Chưa có lịch sử cài đặt nào.</div>';
-        return;
-    }
-
-    lichSu.forEach(function(item) {
-        const div = document.createElement("div");
-        div.className = "history-item";
-        div.innerHTML = `
-            <div class="history-item-top">
-                <h3>MED 1 - Ngăn ${escapeHTML(item.soNgan)}</h3>
-                <span class="history-time">${escapeHTML(dinhDangNgay(item.thoiGianCapNhat || item.thoiGianTao))}</span>
-            </div>
-            <p><strong>Người sử dụng:</strong> ${escapeHTML(item.tenNguoi || "Chưa có thông tin")}</p>
-            <p><strong>Giờ uống:</strong> ${escapeHTML(item.gioUong || "Chưa có thông tin")}</p>
-            <p><strong>Lời nhắn:</strong> ${escapeHTML(item.loiNhan || "Chưa có thông tin")}</p>
-            <span class="history-badge ${item.batNhac === false ? "off" : ""}">${item.batNhac === false ? "Nhắc nhở tắt" : "Nhắc nhở bật"}</span>`;
-        danhSach.appendChild(div);
-    });
-}
-
-function escapeHTML(text) {
-    return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-// Khi đổi trạng thái công tắc, chỉ lưu khi người dùng đang ở chế độ sửa.
-document.getElementById("batNhac").addEventListener("change", function() {
-    if (!dangChinhSuaNgan && duLieuNgan[soNganHienTai]) {
-        this.checked = duLieuNgan[soNganHienTai].batNhac !== false;
-    }
-});
-
-hienThiDanhSachNguoi();
-hienThiDuLieuNgan();
-khoiTaoQR();
+window.addEventListener("DOMContentLoaded",()=>{const q=document.getElementById("maTuHienThi");if(q)q.textContent=maTu;khoiTaoDuLieu()});
