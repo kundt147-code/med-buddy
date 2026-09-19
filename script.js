@@ -957,14 +957,12 @@ function hienThiTongQuanHomNay() {
     const daDung = ds.filter(x => x.trang_thai === "da_dung_thuoc").length;
     const chuaDung = ds.filter(x => x.trang_thai === "chua_dung_thuoc").length;
     const dangNhac = ds.filter(x => x.trang_thai === "dang_nhac").length;
-    const cho = ds.filter(x => !x.trang_thai || x.trang_thai === "cho_den_gio").length;
 
     if (stats) {
         stats.innerHTML = `
             <span class="summary-stat done"><b>${daDung}</b> đã dùng</span>
             <span class="summary-stat missed"><b>${chuaDung}</b> chưa dùng</span>
-            <span class="summary-stat active"><b>${dangNhac}</b> đang nhắc</span>
-            <span class="summary-stat waiting"><b>${cho}</b> chờ uống</span>`;
+            <span class="summary-stat active"><b>${dangNhac}</b> đang nhắc</span>`;
     }
 
     if (summaryDate) {
@@ -972,21 +970,9 @@ function hienThiTongQuanHomNay() {
         summaryDate.textContent = isNaN(d) ? homNay : d.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
     }
 
-    if (summaryList) {
-        if (!ds.length) {
-            summaryList.innerHTML = '<div class="today-empty">Hôm nay chưa có lịch uống thuốc.</div>';
-        } else {
-            summaryList.innerHTML = ds.map(x => {
-                const n = x.ten_nguoi || layNguoi(x.nguoi_su_dung_id)?.ten || "Chưa có thông tin";
-                const st = NHAC_TRANG_THAI_NHAN[x.trang_thai] || "Chờ đến giờ";
-                return `<button type="button" class="today-summary-row" onclick="xemLichSu('${String(x.id).replace(/'/g,"\\'")}')">
-                    <span class="today-summary-time">${escapeHTML(x.gio_uong || "--:--")}</span>
-                    <span class="today-summary-main"><strong>${escapeHTML(x.ten_thuoc || "Chưa có tên thuốc")}</strong><small>${escapeHTML(n)} • ${escapeHTML(tenNgan(Number(x.so_ngan)))}</small></span>
-                    <span class="status-pill ${lopTrangThaiNhac(x.trang_thai)}">${escapeHTML(st)}</span>
-                </button>`;
-            }).join("");
-        }
-    }
+    // Trang Lịch sử chỉ dùng phần tổng hợp để hiển thị số liệu;
+    // danh sách từng lần uống được quản lý bên dưới theo từng ngày.
+    if (summaryList) summaryList.innerHTML = "";
 
     if (compliance) {
         const now = new Date();

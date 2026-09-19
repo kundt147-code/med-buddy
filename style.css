@@ -238,6 +238,8 @@
 .medicine-match-warning{padding:13px 15px;border-radius:14px;background:#eef7ff;border:1px solid #cfe5f6;color:#155d8f;margin-bottom:8px}.medicine-match-warning strong,.allergy-match-warning strong{display:block;font-size:13px;letter-spacing:.2px}.medicine-match-warning p,.allergy-match-warning p{margin:6px 0;line-height:1.45}.allergy-match-warning{padding:13px 15px;border-radius:14px;background:#fff0f0;border:1px solid #efbcbc;color:#a52e35}.allergy-match-warning small{display:block;color:#9c6266;line-height:1.4}
 
 /* ===== V22 - Lịch uống thuốc dùng chung dữ liệu lịch sử ===== */
+.history-summary-compact .history-summary-head{align-items:center}.history-summary-compact .history-summary-head>div:first-child{min-width:0}.history-summary-compact .history-summary-card{}
+.history-summary-compact .compliance-summary{margin-top:14px}.history-summary-compact .today-stats{align-items:center}.history-summary-compact .today-stats span{white-space:nowrap}
 .history-summary-card {
     background: #fff;
     border: 1px solid #dce9f2;
