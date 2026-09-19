@@ -235,3 +235,4 @@
 /* Thông tin bổ sung trong MEDBUDDY là tùy chọn, không tạo cảm giác bắt buộc. */
 .optional-label { font-weight: 500; opacity: .72; font-size: .82em; }
 .field-help { display:block; margin:-6px 0 12px; font-size:12px; line-height:1.45; opacity:.65; }
+.medicine-match-warning{padding:13px 15px;border-radius:14px;background:#eef7ff;border:1px solid #cfe5f6;color:#155d8f;margin-bottom:8px}.medicine-match-warning strong,.allergy-match-warning strong{display:block;font-size:13px;letter-spacing:.2px}.medicine-match-warning p,.allergy-match-warning p{margin:6px 0;line-height:1.45}.allergy-match-warning{padding:13px 15px;border-radius:14px;background:#fff0f0;border:1px solid #efbcbc;color:#a52e35}.allergy-match-warning small{display:block;color:#9c6266;line-height:1.4}

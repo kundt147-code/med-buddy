@@ -255,13 +255,44 @@ function layDanhSachDiUng(n) {
     return String(n?.di_ung || "").split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
 }
 
+function layDanhSachThuocVanBan(value) {
+    return String(value || "")
+        .split(/[,;\n]+/)
+        .map(x => x.replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+}
+
+function chuanHoaTenThuoc(value) {
+    return String(value || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLocaleLowerCase("vi");
+}
+
+function kiemTraThuocTrungHoSo(n, tenThuoc) {
+    const thuocTrongNgan = layDanhSachThuocVanBan(tenThuoc);
+    const thuocTrongHoSo = layDanhSachThuocVanBan(n?.thuoc_dang_dung);
+    if (!thuocTrongNgan.length || !thuocTrongHoSo.length) return [];
+    const hoSo = new Set(thuocTrongHoSo.map(chuanHoaTenThuoc));
+    return thuocTrongNgan.filter(item => hoSo.has(chuanHoaTenThuoc(item)));
+}
+
 function kiemTraCanhBaoDiUng(n, tenThuoc) {
-    const thuoc = String(tenThuoc || "").trim().toLocaleLowerCase("vi");
-    if (!thuoc) return [];
-    return layDanhSachDiUng(n).filter(item => {
-        const a = item.toLocaleLowerCase("vi");
-        return a && (thuoc.includes(a) || a.includes(thuoc));
+    const danhSachThuoc = layDanhSachThuocVanBan(tenThuoc);
+    if (!danhSachThuoc.length) return [];
+    const danhSachDiUng = layDanhSachDiUng(n);
+    const ketQua = [];
+    danhSachThuoc.forEach(thuocItem => {
+        const thuoc = chuanHoaTenThuoc(thuocItem);
+        if (!thuoc) return;
+        danhSachDiUng.forEach(item => {
+            const a = chuanHoaTenThuoc(item);
+            if (a && (thuoc.includes(a) || a.includes(thuoc))) {
+                if (!ketQua.some(x => chuanHoaTenThuoc(x) === chuanHoaTenThuoc(item))) ketQua.push(item);
+            }
+        });
     });
+    return ketQua;
 }
 
 function hienThiCanhBaoDiUngNgan() {
@@ -269,10 +300,18 @@ function hienThiCanhBaoDiUngNgan() {
     if (!box) return;
     const n = layNguoi(document.getElementById("nguoiSuDung")?.value);
     const tenThuoc = document.getElementById("tenThuoc")?.value || "";
-    const matches = kiemTraCanhBaoDiUng(n, tenThuoc);
-    if (!matches.length) { box.style.display = "none"; box.innerHTML = ""; return; }
+    const allergyMatches = kiemTraCanhBaoDiUng(n, tenThuoc);
+    const duplicateMatches = kiemTraThuocTrungHoSo(n, tenThuoc);
+    if (!allergyMatches.length && !duplicateMatches.length) { box.style.display = "none"; box.innerHTML = ""; return; }
     box.style.display = "block";
-    box.innerHTML = `<strong>⚠ CẢNH BÁO DỊ ỨNG</strong><p>Thông tin thuốc đang nhập có cụm từ trùng với dị ứng đã khai báo: <b>${escapeHTML(matches.join(", "))}</b>.</p><small>Đây là cảnh báo dựa trên thông tin đã khai báo, không thay thế tư vấn của bác sĩ hoặc dược sĩ.</small>`;
+    const parts = [];
+    if (duplicateMatches.length) {
+        parts.push(`<div class="medicine-match-warning"><strong>💊 THUỐC TRÙNG VỚI HỒ SƠ</strong><p>Thuốc trùng được nhận diện: <b>${escapeHTML(duplicateMatches.join(", "))}</b>.</p></div>`);
+    }
+    if (allergyMatches.length) {
+        parts.push(`<div class="allergy-match-warning"><strong>⚠ CẢNH BÁO DỊ ỨNG</strong><p>Thuốc đang nhập có thông tin trùng với dị ứng đã khai báo: <b>${escapeHTML(allergyMatches.join(", "))}</b>.</p><small>Đây là cảnh báo dựa trên thông tin đã khai báo, không thay thế tư vấn của bác sĩ hoặc dược sĩ.</small></div>`);
+    }
+    box.innerHTML = parts.join("");
 }
 
 function hienThiDanhSachNguoi() {
