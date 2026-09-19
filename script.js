@@ -173,10 +173,13 @@ function datKhoaForm(khoa) {
 }
 
 function capNhatNutNgap() {
-    document.getElementById("nutNhap").style.display = (!dangNhap && !dangChinhSuaNgan) ? "flex" : "none";
+    const dangXem = !dangNhap && !dangChinhSuaNgan;
+    document.getElementById("nutNhap").style.display = dangXem ? "flex" : "none";
     document.getElementById("nutLuaChonNhap").style.display = (dangNhap && !dangChinhSuaNgan) ? "flex" : "none";
     document.getElementById("nutCaiDatDangSua").style.display = dangChinhSuaNgan ? "flex" : "none";
-    datKhoaForm(!dangNhap && !dangChinhSuaNgan);
+    const nutXoa = document.getElementById("nutXoaNgan");
+    if (nutXoa) nutXoa.style.display = dangXem && !!duLieuNgan[soNganHienTai] ? "inline-flex" : "none";
+    datKhoaForm(dangXem);
     document.getElementById("trangThaiNgan").textContent = dangChinhSuaNgan ? "Đang chỉnh sửa" : dangNhap ? "Đang nhập thông tin" : "Chế độ xem";
     document.getElementById("moTaTrangThai").textContent = dangChinhSuaNgan ? "Bạn đang chỉnh sửa thông tin của ngăn" : dangNhap ? "Chọn Lưu mới hoặc Chỉnh sửa" : "Thông tin hiện tại của ngăn";
 }
@@ -292,6 +295,13 @@ function batDauNhap() {
     dangNhap = true;
     dangChinhSuaNgan = false;
     capNhatNutNgap();
+}
+
+function huyTrongCheDoXem() {
+    // Ở chế độ xem, Hủy chỉ có nhiệm vụ quay về màn hình chọn ngăn.
+    dangNhap = false;
+    dangChinhSuaNgan = false;
+    veTrangChinh();
 }
 
 function huyNhap() {
@@ -440,6 +450,29 @@ async function luuChinhSuaNgan() {
     }
 }
 
+async function xoaThongTinNgan() {
+    const d = duLieuNgan[soNganHienTai];
+    if (!d?.id) {
+        hienThiModal("Chưa có dữ liệu", "Ngăn này hiện chưa có thông tin để xóa.", "info");
+        return;
+    }
+
+    hienThiModal("Xác nhận xóa", "Bạn có chắc muốn xóa thông tin hiện tại của ngăn này không? Lịch sử và thông tin người sử dụng sẽ không bị ảnh hưởng.", "confirm", "Xóa thông tin", async () => {
+        try {
+            const { error } = await db.from("ngan_thuoc").delete().eq("id", d.id).eq("ma_tu", maTu);
+            if (error) throw error;
+            await taiDuLieuTuDB();
+            dangNhap = false;
+            dangChinhSuaNgan = false;
+            await moNgan(soNganHienTai);
+            hienThiModal("Đã xóa", "Đã xóa thông tin hiện tại của ngăn thành công. Lịch sử và người sử dụng vẫn được giữ nguyên.", "success");
+        } catch (err) {
+            console.error("Xóa thông tin ngăn:", err);
+            hienThiModal("Xóa chưa thành công", "Không thể xóa thông tin ngăn. Kiểm tra quyền DELETE của Supabase rồi thử lại.", "error");
+        }
+    });
+}
+
 /* =========================
    NGƯỜI SỬ DỤNG
 ========================= */
@@ -466,12 +499,19 @@ function dongQuanLyNguoi() {
 
 function hienThiDanhSachNguoiQuanLy() {
     const box = document.getElementById("danhSachNguoiQuanLy");
+    if (!box) return;
     box.innerHTML = "";
-    danhSachNguoi.forEach(n => {
+    const q = (document.getElementById("timNguoi")?.value || "").trim().toLocaleLowerCase("vi");
+    const ds = danhSachNguoi.filter(n => !q || String(n.ten || "").toLocaleLowerCase("vi").includes(q));
+    if (!ds.length) {
+        box.innerHTML = '<div class="history-empty">Không tìm thấy người sử dụng phù hợp.</div>';
+        return;
+    }
+    ds.forEach(n => {
         const b = document.createElement("button");
         b.type = "button";
         b.className = "person-row";
-        b.innerHTML = `<strong>${escapeHTML(n.ten)}</strong><span>Xem thông tin →</span>`;
+        b.innerHTML = `<span class="person-row-main"><span class="person-row-avatar">♙</span><span><strong>${escapeHTML(n.ten)}</strong><small>${escapeHTML(n.tinh_trang_benh || "Chưa có thông tin")}</small></span></span><span>Xem thông tin →</span>`;
         b.onclick = () => moThongTinNguoiQuanLy(n.id, "quanLyNguoi");
         box.appendChild(b);
     });
@@ -652,12 +692,26 @@ function moLichSu() {
 function hienThiLichSu() {
     const box = document.getElementById("danhSachLichSu");
     box.innerHTML = "";
-    if (!lichSu.length) {
-        box.innerHTML = '<div class="history-empty">Chưa có lịch sử cài đặt nào.</div>';
+    const ten = (document.getElementById("timLichSuTen")?.value || "").trim().toLocaleLowerCase("vi");
+    const ngay = document.getElementById("timLichSuNgay")?.value || "";
+
+    const ketQua = lichSu.filter(x => {
+        const tenNguoi = String(x.ten_nguoi || "").toLocaleLowerCase("vi");
+        const moc = x.created_at || x.updated_at || "";
+        let ngayLichSu = String(moc).slice(0, 10);
+        const parsed = new Date(moc);
+        if (moc && !isNaN(parsed)) {
+            ngayLichSu = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(parsed);
+        }
+        return (!ten || tenNguoi.includes(ten)) && (!ngay || ngayLichSu === ngay);
+    });
+
+    if (!ketQua.length) {
+        box.innerHTML = '<div class="history-empty">Không tìm thấy lịch sử phù hợp với điều kiện tra cứu.</div>';
         return;
     }
 
-    lichSu.forEach(x => {
+    ketQua.forEach(x => {
         const d = document.createElement("button");
         d.type = "button";
         d.className = "history-item";
@@ -673,6 +727,14 @@ function hienThiLichSu() {
         d.onclick = () => xemLichSu(x.id);
         box.appendChild(d);
     });
+}
+
+function xoaBoLocLichSu() {
+    const ten = document.getElementById("timLichSuTen");
+    const ngay = document.getElementById("timLichSuNgay");
+    if (ten) ten.value = "";
+    if (ngay) ngay.value = "";
+    hienThiLichSu();
 }
 
 function xemLichSu(id) {
@@ -707,5 +769,7 @@ function quayLaiLichSu() {
 window.addEventListener("DOMContentLoaded", () => {
     const q = document.getElementById("maTuHienThi");
     if (q) q.textContent = maTu;
+    const menuTu = document.getElementById("menuTuSelector");
+    if (menuTu) menuTu.value = maTu;
     khoiTaoDuLieu();
 });
